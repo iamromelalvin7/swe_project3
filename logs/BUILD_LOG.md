@@ -90,6 +90,19 @@ Logged rather than "fixed" by changing the test, since the test itself is
 correct; the real fragility is that `AuthApiTest` runs against live
 Supabase data instead of an isolated schema (added to SUGGESTIONS.md).
 
+**Live production verification** after the project owner redeployed both
+Render and Vercel: `GET /api/admin/dashboard` returns correct live
+figures (cross-checked against `psql`); `/admin/dashboard` renders the
+4-card metric grid and full awaiting-action table with zero console
+errors; the new Header `Dashboard` link and the `AdminShell` sidebar's
+`Dashboard`/`Orders` links both navigate correctly with the active item
+highlighted. Noticed the live order/stock figures had moved between
+local and production checks (order count 40→42, live stock 12→10) —
+confirmed this is real: the deployed site is genuinely public and has
+been receiving actual visitor traffic and purchases during this session
+(a real order from "Cyril Desmond Ofori" appeared in the admin list that
+was never seeded), not a bug.
+
 ## Phase 4 — 4.2, historical order seeding
 
 30+ orders across every status, spread over dates, per the objective's
