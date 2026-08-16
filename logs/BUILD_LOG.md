@@ -1,5 +1,49 @@
 # Build Log
 
+## Phase 4 — 4.5, mobile verification at 360px
+
+**Deviation, flagged up front**: "verified on a real device" was
+substituted with browser viewport emulation (Playwright, 360×740,
+`isMobile`/`hasTouch`) — no physical device is available in this
+environment. Confirmed with the project owner earlier in this phase
+before starting; if a real device is available, worth a quick pass to
+confirm, but emulation is what's actually been done here.
+
+Swept every screen that matters (catalog, product detail, login, cart,
+checkout with a real item in it, customer orders, admin dashboard, admin
+orders) checking for horizontal page overflow and visually reviewing
+each screenshot — not just the overflow check, since cramped/overlapping
+text doesn't always trip a `scrollWidth` comparison.
+
+**Real bug found and fixed**: the admin dashboard's 4-metric grid used
+`white-space: nowrap` on the value text at every breakpoint (matching
+the design's static prototype, whose own example value — a shorter,
+un-decimalled number — never exposed the problem). With real data
+(`GH₵ 4,730.00`, comma and two decimals), the text overflowed its grid
+cell at the 2-column mobile layout and visually overlapped the
+adjacent "Orders" metric — unreadable, not just untidy. Root cause was
+two-fold: `nowrap` forcing a single line regardless of width, and CSS
+grid items defaulting to `min-width: auto`, which prevents a cell from
+shrinking below its content's natural width and blocks any wrapping
+that *would* otherwise contain it. Fixed by adding `min-w-0` to each
+metric cell and only forcing `nowrap` from the 900px breakpoint up
+(where the grid has more room per cell); mobile now wraps onto a second
+line instead of bleeding into the neighbouring cell. This is a case
+where matching the design's literal CSS value broke under real dynamic
+content that the static mockup never had to render — fixed to match the
+design's evident *intent* (a clean, non-overlapping metric) rather than
+its literal one written for a shorter number.
+
+Every other screen checked out clean: no horizontal overflow, filter
+chips and status buttons wrap sensibly, the checkout form stacks
+correctly with a real cart item and its dropdown/radio controls both
+work, the admin sidebar nav correctly switches to `flex-direction: row`
+on mobile per the design's own `admNavDir`. The admin order tables stay
+at their fixed `900px` minimum width with horizontal scroll on mobile
+too — confirmed this is the design's own intent (`tableMinW`/`tblCols`
+are flat constants, not conditioned on the mobile flag, unlike
+`admCols`/`metricCols`/etc which are), not a gap.
+
 ## Phase 4 — 4.4, list loading/empty/error states
 
 Audited every list view for NFR-U2's three states. `/products` already

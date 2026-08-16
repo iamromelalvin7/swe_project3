@@ -82,9 +82,9 @@ export default function AdminDashboardPage() {
 
         <div className="grid grid-cols-2 border-y border-rule min-[900px]:grid-cols-[1.5fr_1fr_1fr_1fr]">
           {metrics.map((m, i) => (
-            <div key={m.label} className={`py-6 pl-4 min-[900px]:py-[26px] min-[900px]:pl-6 ${i > 0 ? "border-l border-rule" : ""}`}>
+            <div key={m.label} className={`min-w-0 py-6 pl-4 pr-3 min-[900px]:py-[26px] min-[900px]:pl-6 ${i > 0 ? "border-l border-rule" : ""}`}>
               <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">{m.label}</div>
-              <div className="mt-3 whitespace-nowrap font-mono text-2xl tracking-[-0.01em] min-[900px]:text-[32px]">{m.value}</div>
+              <div className="mt-3 font-mono text-xl tracking-[-0.01em] min-[900px]:whitespace-nowrap min-[900px]:text-[32px]">{m.value}</div>
             </div>
           ))}
         </div>
