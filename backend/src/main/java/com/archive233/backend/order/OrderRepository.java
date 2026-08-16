@@ -42,4 +42,21 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
      */
     @Query("SELECT oi.order.id, COUNT(oi) FROM OrderItem oi WHERE oi.order.id IN :orderIds GROUP BY oi.order.id")
     List<Object[]> countItemsByOrderIds(@Param("orderIds") List<UUID> orderIds);
+
+    /**
+     * Revenue and items-sold are counted off DELIVERED orders, not payment
+     * status — a cash-on-delivery {@code Payment} is only ever created as
+     * PENDING and nothing in this codebase ever transitions it to PAID
+     * (there's no "mark received" action), so a payment-status-based figure
+     * would systematically undercount every COD sale. DELIVERED means the
+     * money actually changed hands regardless of how.
+     */
+    @Query("SELECT COALESCE(SUM(o.totalPesewas), 0) FROM Order o WHERE o.status = :status")
+    long sumTotalPesewasByStatus(@Param("status") OrderStatus status);
+
+    @Query("SELECT COALESCE(SUM(oi.quantity), 0) FROM Order o JOIN o.items oi WHERE o.status = :status")
+    long sumItemQuantityByOrderStatus(@Param("status") OrderStatus status);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.status NOT IN :excluded")
+    long countByStatusNotIn(@Param("excluded") List<OrderStatus> excluded);
 }

@@ -89,6 +89,9 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
         """)
     List<String> findDistinctPublishedSizeLabels();
 
+    @Query("SELECT COALESCE(SUM(p.stockQuantity), 0) FROM Product p WHERE p.status = :status")
+    long sumStockQuantityByStatus(@Param("status") ProductStatus status);
+
     // --- REFERENCE — verbatim from db/01_schema.sql (hard rule 4) ---
     // Optimistic; zero rows affected means someone else won the race.
 

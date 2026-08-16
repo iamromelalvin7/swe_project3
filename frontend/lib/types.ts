@@ -138,3 +138,12 @@ export type CheckoutResponse = {
   order: OrderDetail;
   authorizationUrl: string | null;
 };
+
+export type AdminDashboard = {
+  totalRevenuePesewas: number;
+  orderCount: number;
+  itemsSold: number;
+  liveStockUnits: number;
+  awaitingActionCount: number;
+  awaitingAction: AdminOrderSummary[];
+};

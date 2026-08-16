@@ -29,4 +29,9 @@ public final class OrderSpecifications {
     public static Specification<Order> createdBefore(OffsetDateTime to) {
         return (root, query, cb) -> to == null ? null : cb.lessThanOrEqualTo(root.get("createdAt"), to);
     }
+
+    /** Every order still somewhere in the fulfilment pipeline — the two terminal statuses excluded. */
+    public static Specification<Order> awaitingAction() {
+        return (root, query, cb) -> cb.not(root.get("status").in(OrderStatus.DELIVERED, OrderStatus.CANCELLED));
+    }
 }

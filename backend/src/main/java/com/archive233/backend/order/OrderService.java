@@ -19,11 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.archive233.backend.cart.CartItemRepository;
 import com.archive233.backend.cart.dto.CartLineDto;
 import com.archive233.backend.catalog.ProductRepository;
+import com.archive233.backend.catalog.ProductStatus;
 import com.archive233.backend.common.PageResponse;
 import com.archive233.backend.delivery.DeliveryZone;
 import com.archive233.backend.delivery.DeliveryZoneRepository;
 import com.archive233.backend.error.ApiException;
 import com.archive233.backend.error.NotFoundException;
+import com.archive233.backend.order.dto.AdminDashboardDto;
 import com.archive233.backend.order.dto.AdminOrderSummaryDto;
 import com.archive233.backend.order.dto.CheckoutRequest;
 import com.archive233.backend.order.dto.OrderDetailDto;
@@ -173,6 +175,43 @@ public class OrderService {
             o.getId(), o.getOrderNumber(), o.getDeliveryName(), o.getDeliveryPhone(), o.getDeliveryZoneName(),
             itemCounts.getOrDefault(o.getId(), 0L), o.getTotalPesewas(),
             paymentStatuses.getOrDefault(o.getId(), PaymentStatus.PENDING), o.getStatus(), o.getCreatedAt())));
+    }
+
+    /**
+     * Revenue and items-sold are counted off DELIVERED orders (see
+     * {@link OrderRepository#sumTotalPesewasByStatus}) — not payment
+     * status, since a cash-on-delivery payment never transitions to PAID
+     * anywhere in this codebase and a payment-based figure would
+     * therefore undercount every COD sale. "Awaiting action" is every
+     * order not yet DELIVERED or CANCELLED, capped at 50 (NFR-P6) and
+     * ordered oldest-first — the ones that have been waiting longest are
+     * the most in need of the owner's attention.
+     */
+    public AdminDashboardDto getDashboard() {
+        long revenue = orderRepository.sumTotalPesewasByStatus(OrderStatus.DELIVERED);
+        long orderCount = orderRepository.count();
+        long itemsSold = orderRepository.sumItemQuantityByOrderStatus(OrderStatus.DELIVERED);
+        long liveStock = productRepository.sumStockQuantityByStatus(ProductStatus.PUBLISHED);
+        long awaitingActionCount = orderRepository.countByStatusNotIn(List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED));
+
+        Specification<Order> spec = OrderSpecifications.awaitingAction();
+        Page<Order> awaiting = orderRepository.findAll(spec,
+            PageRequest.of(0, MAX_PAGE_SIZE, Sort.by(Sort.Direction.ASC, "createdAt")));
+
+        List<UUID> orderIds = awaiting.getContent().stream().map(Order::getId).toList();
+        Map<UUID, Long> itemCounts = orderIds.isEmpty() ? Map.of() : orderRepository.countItemsByOrderIds(orderIds).stream()
+            .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+        Map<UUID, PaymentStatus> paymentStatuses = orderIds.isEmpty() ? Map.of() : paymentRepository.findByOrderIdIn(orderIds).stream()
+            .collect(Collectors.toMap(p -> p.getOrder().getId(), Payment::getStatus));
+
+        List<AdminOrderSummaryDto> awaitingDtos = awaiting.getContent().stream()
+            .map(o -> new AdminOrderSummaryDto(
+                o.getId(), o.getOrderNumber(), o.getDeliveryName(), o.getDeliveryPhone(), o.getDeliveryZoneName(),
+                itemCounts.getOrDefault(o.getId(), 0L), o.getTotalPesewas(),
+                paymentStatuses.getOrDefault(o.getId(), PaymentStatus.PENDING), o.getStatus(), o.getCreatedAt()))
+            .toList();
+
+        return new AdminDashboardDto(revenue, orderCount, itemsSold, liveStock, awaitingActionCount, awaitingDtos);
     }
 
     public OrderDetailDto getForAdmin(UUID orderId) {

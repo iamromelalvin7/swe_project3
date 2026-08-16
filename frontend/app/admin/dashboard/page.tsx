@@ -1,57 +1,66 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { useAuth } from "@/lib/auth";
 import { authFetch } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
-import type { AdminOrderSummary, OrderStatus, PageResponse } from "@/lib/types";
+import type { AdminDashboard } from "@/lib/types";
 
-const STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
-
-function AdminOrdersInner() {
+export default function AdminDashboardPage() {
   const { ready, user } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const statusFilter = searchParams.get("status") ?? "";
-  const [orders, setOrders] = useState<AdminOrderSummary[] | null>(null);
+  const [data, setData] = useState<AdminDashboard | null>(null);
 
   useEffect(() => {
     if (ready && (!user || user.role !== "ADMIN")) {
-      router.push("/login?redirect=/admin/orders");
+      router.push("/login?redirect=/admin/dashboard");
       return;
     }
     if (user?.role === "ADMIN") {
-      const qs = statusFilter ? `?status=${statusFilter}` : "";
-      authFetch<PageResponse<AdminOrderSummary>>(`/api/admin/orders${qs}`, user.token).then((res) => setOrders(res.items));
+      authFetch<AdminDashboard>("/api/admin/dashboard", user.token).then(setData);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, statusFilter]);
+  }, [ready, user]);
+
+  if (!data) {
+    return (
+      <AdminShell>
+        <div className="py-24 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Loading…</div>
+      </AdminShell>
+    );
+  }
+
+  const metrics = [
+    { label: "Total revenue", value: formatMoney(data.totalRevenuePesewas) },
+    { label: "Orders", value: String(data.orderCount) },
+    { label: "Items sold", value: String(data.itemsSold) },
+    { label: "Live stock", value: String(data.liveStockUnits) },
+  ];
 
   return (
     <AdminShell>
       <div>
-        <h1 className="mb-8 font-serif text-[56px] max-[640px]:text-[38px]">Orders</h1>
+        <h1 className="mb-8 font-serif text-[56px] max-[640px]:text-[38px]">Overview</h1>
 
-        <div className="mb-8 flex flex-wrap gap-3">
-          {["", ...STATUSES].map((s) => (
-            <button
-              key={s || "all"}
-              onClick={() => router.push(s ? `/admin/orders?status=${s}` : "/admin/orders")}
-              className={`h-9 border px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] ${
-                statusFilter === s ? "border-ink bg-ink text-white" : "border-rule text-grey hover:text-ink"
-              }`}
-            >
-              {s ? s.replace(/_/g, " ") : "All"}
-            </button>
+        <div className="grid grid-cols-2 border-y border-rule min-[900px]:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          {metrics.map((m, i) => (
+            <div key={m.label} className={`py-6 pl-4 min-[900px]:py-[26px] min-[900px]:pl-6 ${i > 0 ? "border-l border-rule" : ""}`}>
+              <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">{m.label}</div>
+              <div className="mt-3 whitespace-nowrap font-mono text-2xl tracking-[-0.01em] min-[900px]:text-[32px]">{m.value}</div>
+            </div>
           ))}
         </div>
 
-        {orders && orders.length === 0 && <div className="border-t border-rule py-16 text-center text-sm text-grey">No orders match.</div>}
+        <h2 className="mb-6 mt-14 font-serif text-[28px] min-[900px]:text-[36px]">Awaiting action</h2>
 
-        {orders && orders.length > 0 && (
+        {data.awaitingAction.length === 0 && (
+          <div className="border-t border-rule py-16 text-center text-sm text-grey">Nothing needs attention right now.</div>
+        )}
+
+        {data.awaitingAction.length > 0 && (
           <div className="overflow-x-auto">
             <div className="min-w-[900px]">
               <div className="grid grid-cols-[110px_150px_130px_130px_70px_130px_100px_130px] gap-4 border-b border-rule pb-3.5">
@@ -61,7 +70,7 @@ function AdminOrdersInner() {
                   </div>
                 ))}
               </div>
-              {orders.map((o) => (
+              {data.awaitingAction.map((o) => (
                 <Link
                   key={o.id}
                   href={`/admin/orders/${o.id}`}
@@ -84,13 +93,5 @@ function AdminOrdersInner() {
         )}
       </div>
     </AdminShell>
-  );
-}
-
-export default function AdminOrdersPage() {
-  return (
-    <Suspense>
-      <AdminOrdersInner />
-    </Suspense>
   );
 }

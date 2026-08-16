@@ -22,9 +22,14 @@ export function Header() {
             <span className="text-ink">{count}</span>
           </Link>
         )}
-        {user && (
+        {user && user.role === "CUSTOMER" && (
           <Link href="/orders" className="hover:text-ink">
             My orders
+          </Link>
+        )}
+        {user && user.role === "ADMIN" && (
+          <Link href="/admin/dashboard" className="hover:text-ink">
+            Dashboard
           </Link>
         )}
         {!ready ? null : user ? (

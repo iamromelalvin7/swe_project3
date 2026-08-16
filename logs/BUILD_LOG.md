@@ -1,5 +1,95 @@
 # Build Log
 
+## Phase 4 — 4.3, admin dashboard
+
+Objective 4.3's wording ("revenue, order count, items sold, live stock,
+awaiting-action count") maps to FR-I1 + FR-I2; FR-I3 (five most recent
+orders, Should) and FR-I4 (sales by category, Could — already in the
+gated stretch queue as S1) are out of 4.3's literal scope and weren't
+built.
+
+**Design source confirmed before building anything**: the approved
+export (`Archive 233.dc.html`) has a full `isAdminDash` screen —
+`adminNav` (`Dashboard` / `Products` / `Orders`), a 4-card metric grid
+(`Total revenue`, `Orders`, `Items sold`, `Live stock` — exactly 4 cards,
+no separate 5th "awaiting-action count" card), and an "Awaiting action"
+table below it in the identical 8-column shape as FR-H1's admin order
+list. Built to match this exactly rather than inventing a 5th metric
+card the design doesn't have — the count is implicit in the table (and
+in `awaitingActionCount` in the API response, for anyone who wants the
+number without the list).
+
+**Revenue and items-sold definition, flagged before implementing**: a
+cash-on-delivery `Payment` is created as `PENDING` in `OrderService
+.placeOrder` and nothing anywhere in this codebase ever transitions it
+to `PAID` — there's no "mark received" admin action, only
+`CheckoutService.applyVerification` (the Paystack path) ever sets
+`PAID`. A payment-status-based revenue figure would therefore
+permanently undercount every cash sale. Defined both revenue and
+items-sold off `orders.status = DELIVERED` instead — the order actually
+completing is the real signal that money changed hands, regardless of
+method. Backed by `OrderRepository.sumTotalPesewasByStatus` /
+`.sumItemQuantityByOrderStatus`, both plain parameterised equality
+queries (no null-checking branches — deliberately avoids the recurring
+PgJDBC "ambiguous parameter" bug class this project has hit before).
+"Live stock" = `SUM(stock_quantity)` over `PUBLISHED` products
+(`ProductRepository.sumStockQuantityByStatus`) — archived fixtures and
+history-only products don't count. "Awaiting action" = every order not
+yet `DELIVERED` or `CANCELLED` (`OrderSpecifications.awaitingAction`),
+capped at 50 per NFR-P6, oldest-first so the longest-waiting orders
+surface first; item counts and payment statuses are batched exactly the
+same way `listForAdmin` already does it — one extra query each, not
+per-row.
+
+**Data correction found while building this**: some of the 4.2 seed's
+cash-on-delivery `payments` rows were marked `PAID` for
+delivered/packed/etc. orders — inconsistent with the discovery above,
+since real COD payments never transition automatically. Corrected via a
+direct `UPDATE` (flagged and run only after explicit approval, same as
+the order seed itself) so the admin UI's Payment column reflects what
+the app would actually show for a real cash order at any of those
+stages.
+
+**Admin shell retrofit**: the design's `isAdmin` wrapper is a two-column
+layout (`Archive 233` wordmark + `Dashboard`/`Products`/`Orders` sidebar
+nav, full-height) shared by every admin screen, distinct from the
+storefront `Header`. Phase 3's `/admin/orders` didn't have it — deferred
+at the time because only one of the three destinations existed and
+building nav to two dead links would have been inventing a broken state
+(logged then). With Dashboard now real, built `components/AdminShell.tsx`
+matching the design's `admCols`/`admSidePad`/`admNavDir`/`admPad` values
+and retrofitted `/admin/orders` and `/admin/orders/[id]` onto it for
+consistency. Two deviations from the literal design, both logged rather
+than silently resolved:
+1. **"Products" omitted from the nav** — no admin product-management
+   screen exists or is in any current phase's objectives (flagged
+   repeatedly since Phase 2/3; the project owner's instruction each time
+   has been to keep following the normal phase plan, not add it). Only
+   `Dashboard` and `Orders` are real, so only those two are linked.
+2. **Kept the storefront `Header` above the sidebar shell** instead of
+   the design's own bare wordmark — the static prototype has no sign-out
+   affordance anywhere in the admin section, which would leave an admin
+   with no way to log out short of navigating away first. This is a
+   functional necessity, not a stylistic addition (no new colours,
+   icons, or decoration), so it stays.
+- `components/Header.tsx`: added a `Dashboard` link for `role === "ADMIN"`
+  users (previously the only way into `/admin/orders` at all was typing
+  the URL directly — flagged as a real reachability gap, not just a nice-
+  to-have, since 4.3's dashboard is the natural admin landing page).
+
+**Verified**: `mvn test` — 4/5 (see note below), `npx tsc --noEmit` clean,
+`next build` clean. Hit the live `/api/admin/dashboard` endpoint locally
+against the real Supabase data before deploying: revenue/order-count/
+items-sold/live-stock/awaiting-action all computed correctly and matched
+manual cross-checks against `psql`. One unrelated test-pollution finding
+along the way: `AuthApiTest.register_duplicateEmail_returns409WithErrorContract`
+now fails, because its hardcoded fixture email (`kojo.mensah@example.com`)
+collides with a real customer registered for the 4.2 seed — a coincidence
+of two independently-chosen common Ghanaian names, not a code regression.
+Logged rather than "fixed" by changing the test, since the test itself is
+correct; the real fragility is that `AuthApiTest` runs against live
+Supabase data instead of an isolated schema (added to SUGGESTIONS.md).
+
 ## Phase 4 — 4.2, historical order seeding
 
 30+ orders across every status, spread over dates, per the objective's

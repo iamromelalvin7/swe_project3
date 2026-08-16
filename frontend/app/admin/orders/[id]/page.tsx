@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Header } from "@/components/Header";
+import { AdminShell } from "@/components/AdminShell";
 import { useAuth } from "@/lib/auth";
 import { authFetch, ApiRequestError } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
@@ -50,10 +50,9 @@ export default function AdminOrderDetailPage() {
 
   if (!order) {
     return (
-      <main>
-        <Header />
-        <div className="px-14 py-24 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Loading…</div>
-      </main>
+      <AdminShell>
+        <div className="py-24 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Loading…</div>
+      </AdminShell>
     );
   }
 
@@ -62,9 +61,8 @@ export default function AdminOrderDetailPage() {
   const canCancel = order.status !== "DELIVERED" && order.status !== "CANCELLED";
 
   return (
-    <main>
-      <Header />
-      <div className="px-14 pt-11 pb-[120px] max-[640px]:px-5 max-[640px]:pt-7">
+    <AdminShell>
+      <div>
         <div className="mb-10 flex items-center gap-4.5 border-b border-rule pb-5">
           <Link href="/admin/orders" className="font-mono text-[11px] text-grey hover:text-ink">
             ←
@@ -173,6 +171,6 @@ export default function AdminOrderDetailPage() {
           </div>
         </div>
       </div>
-    </main>
+    </AdminShell>
   );
 }
