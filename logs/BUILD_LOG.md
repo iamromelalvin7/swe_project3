@@ -1,5 +1,38 @@
 # Build Log
 
+## Phase 2 (continued) — Deployment
+
+Pushed, asked the project owner to redeploy both Render and Vercel manually
+(neither auto-deploys). Two issues surfaced only once actually live:
+
+1. **Render build failed**: `cannot find symbol: class InvalidCredentialsException`.
+   Root cause was nastier than a missing import — `.gitignore` line 6,
+   `*credentials*`, had been silently matching `InvalidCredentialsException.java`
+   on this Windows checkout (`core.ignorecase` defaults true) since the file
+   was first written. It existed on disk, so every local `mvn` build found it
+   and every local test passed — git had simply never tracked it, on any
+   commit. Render clones fresh from git, so it was the first place the gap
+   was visible. Audited the rest of the tracked source tree for the same
+   class of problem (found nothing else affected), narrowed the pattern to
+   the exact `credentials` filename (redundant with `.env*` anyway for real
+   secrets), and verified against a genuinely fresh `git clone` + `mvn package`
+   before pushing again — not just `git status`.
+2. **Registration failed in the browser with a CORS error**, reported by the
+   project owner, even though a direct backend curl and an automated
+   Playwright run against `archive233.vercel.app` both succeeded. The error
+   named a different origin: `archive233-lqb1k117f-romelalvin7-4492s-projects
+   .vercel.app` — a Vercel *preview* deployment URL (fresh random hash per
+   deploy), not the stable production domain in `CORS_ALLOWED_ORIGINS`.
+   Confirmed with matched `curl -X OPTIONS` calls: the preview origin gets
+   403, the production origin gets a proper CORS-approved 200. This is
+   NFR-S9 working as intended, not a bug — resolved by pointing the owner at
+   `archive233.vercel.app` specifically, not by loosening CORS.
+
+Live-verified post-fix: register, login, and a customer-token 403 on an
+admin route, all against the production URLs (transcripts in the
+checkpoint). Live screenshots of the deployed catalog (including the
+real sold-out product) and product detail match the local ones exactly.
+
 ## Phase 2 (continued) — Frontend
 
 ### 2.13 — Register, login, token persistence, logout
