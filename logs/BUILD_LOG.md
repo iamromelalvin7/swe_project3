@@ -97,10 +97,42 @@ schema against live Supabase, `GET /api/health` → `200 {"status":"ok"}`,
   `CLAUDE.md`, etc.) — flagged to the project owner before removing it.
 - `git check-ignore -v backend/.env` output captured (see CHECKPOINT 1).
 
-### Pending (require the project owner)
-- 1.9 — Render env vars + manual deploy trigger (owner confirmed no
-  auto-deploy on push is configured).
-- 1.12 — Vercel env var (`NEXT_PUBLIC_API_URL` → the Render URL) + manual
-  deploy trigger.
-- 1.13 — depends on both of the above being live.
-- 1.16 — first commit, pending final review before push.
+### 1.16 — first commit and push
+- `git init`, verified `git check-ignore -v backend/.env` and
+  `frontend/.env.local` both resolve to ignore rules before staging anything.
+- Removed a nested `.git` directory `create-next-app` had initialized inside
+  `frontend/` (would otherwise be tracked as a broken submodule reference).
+- Caught and removed `backend/supabase/.temp/` before staging — leftover
+  local cache from the Supabase CLI diagnostic session above (no credentials
+  in it, just project ref/hostname, but it doesn't belong in the repo).
+  Added `supabase/.temp/` and `supabase/.branches/` to `.gitignore`
+  defensively.
+- Root commit `639b183`, pushed to `main` on `iamromelalvin7/swe_project3`.
+
+### 1.9 — Render deploy
+- Neither Render nor Vercel were actually set up yet, despite the initial
+  task framing — walked the project owner through creating both from
+  scratch after the push, since Render can't build a repo with no commits.
+- Backend deployed as a Docker web service (root directory `backend`,
+  Dockerfile auto-detected), env vars copied from `backend/.env` (the
+  corrected pooler URL/username). Live at
+  https://archive233-backend.onrender.com — both `/api/health` and
+  `/api/health/db` verified `200 {"status":"ok"}` in production.
+
+### 1.12–1.13 — Vercel deploy
+- First deploy failed: `Error: No Output Directory named "public" found`.
+  Root cause was a Vercel project-setting mismatch, not a code issue —
+  Framework Preset had reverted to "Other" (expects a static `public/`
+  build) instead of "Next.js" (outputs to `.next/`) after the Root
+  Directory was changed to `frontend`. Fixed in Vercel's dashboard
+  (Framework Preset → Next.js) and redeployed with no code changes.
+- Second snag: the deployment URL returned a 302 to `vercel.com/sso-api` —
+  Vercel's Deployment Protection (SSO wall) was on by default for the
+  team-scoped project, which would have blocked public/grader access.
+  Disabled it in Project Settings.
+- Live at https://archive233.vercel.app — confirmed server-rendering the
+  live `{"status":"ok"}` fetched from the Render backend.
+- Updated Render's `CORS_ALLOWED_ORIGINS` from the `localhost:3000`
+  placeholder to `https://archive233.vercel.app`; verified live via a
+  request with an `Origin` header — response reflects that exact origin,
+  never `*`.
