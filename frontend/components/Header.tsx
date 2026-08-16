@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 
 export function Header() {
   const { user, ready, logout } = useAuth();
+  const { count } = useCart();
   const router = useRouter();
 
   return (
@@ -14,6 +16,17 @@ export function Header() {
         Archive 233
       </Link>
       <nav className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">
+        {user && (
+          <Link href="/cart" className="flex items-center gap-1.5 hover:text-ink">
+            Cart
+            <span className="text-ink">{count}</span>
+          </Link>
+        )}
+        {user && (
+          <Link href="/orders" className="hover:text-ink">
+            My orders
+          </Link>
+        )}
         {!ready ? null : user ? (
           <>
             <span className="text-ink">{user.fullName}</span>

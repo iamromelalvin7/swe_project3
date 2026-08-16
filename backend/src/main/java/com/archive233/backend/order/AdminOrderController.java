@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.archive233.backend.common.PageResponse;
+import com.archive233.backend.order.dto.AdminOrderSummaryDto;
 import com.archive233.backend.order.dto.OrderDetailDto;
-import com.archive233.backend.order.dto.OrderSummaryDto;
 import com.archive233.backend.order.dto.UpdateOrderStatusRequest;
 
 import jakarta.validation.Valid;
@@ -33,7 +33,7 @@ public class AdminOrderController {
     }
 
     @GetMapping
-    public PageResponse<OrderSummaryDto> list(
+    public PageResponse<AdminOrderSummaryDto> list(
         @RequestParam(required = false) OrderStatus status,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to,

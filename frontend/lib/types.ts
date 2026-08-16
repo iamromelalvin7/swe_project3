@@ -63,3 +63,78 @@ export type PageResponse<T> = {
   totalItems: number;
   totalPages: number;
 };
+
+export type CartLine = {
+  productId: string;
+  title: string;
+  brand: string;
+  sizeLabel: string;
+  pricePesewas: number;
+  primaryImageUrl: string | null;
+  primaryThumbUrl: string | null;
+  quantity: number;
+  expiresAt: string;
+};
+
+export type DeliveryZone = {
+  id: string;
+  name: string;
+  feePesewas: number;
+};
+
+export type OrderStatus = "PENDING" | "CONFIRMED" | "PACKED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED";
+
+export type PaymentMethod = "PAYSTACK" | "CASH_ON_DELIVERY";
+
+export type OrderSummary = {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  itemCount: number;
+  totalPesewas: number;
+  createdAt: string;
+};
+
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED";
+
+export type AdminOrderSummary = {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  zoneName: string;
+  itemCount: number;
+  totalPesewas: number;
+  paymentStatus: PaymentStatus;
+  status: OrderStatus;
+  createdAt: string;
+};
+
+export type OrderItemLine = {
+  productTitle: string;
+  productSize: string;
+  imageUrl: string | null;
+  quantity: number;
+  pricePesewas: number;
+};
+
+export type OrderDetail = {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  deliveryName: string;
+  deliveryPhone: string;
+  deliveryAddress: string;
+  deliveryZoneName: string;
+  deliveryFeePesewas: number;
+  subtotalPesewas: number;
+  totalPesewas: number;
+  paymentMethod: PaymentMethod | null;
+  items: OrderItemLine[];
+  createdAt: string;
+};
+
+export type CheckoutResponse = {
+  order: OrderDetail;
+  authorizationUrl: string | null;
+};

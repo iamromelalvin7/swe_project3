@@ -24,6 +24,7 @@ import com.archive233.backend.delivery.DeliveryZone;
 import com.archive233.backend.delivery.DeliveryZoneRepository;
 import com.archive233.backend.error.ApiException;
 import com.archive233.backend.error.NotFoundException;
+import com.archive233.backend.order.dto.AdminOrderSummaryDto;
 import com.archive233.backend.order.dto.CheckoutRequest;
 import com.archive233.backend.order.dto.OrderDetailDto;
 import com.archive233.backend.order.dto.OrderItemDto;
@@ -153,8 +154,8 @@ public class OrderService {
         return toDetailDto(order);
     }
 
-    public PageResponse<OrderSummaryDto> listForAdmin(OrderStatus status, OffsetDateTime from, OffsetDateTime to,
-                                                       int page, Integer pageSize) {
+    public PageResponse<AdminOrderSummaryDto> listForAdmin(OrderStatus status, OffsetDateTime from, OffsetDateTime to,
+                                                             int page, Integer pageSize) {
         int size = pageSize == null ? DEFAULT_PAGE_SIZE : Math.min(pageSize, MAX_PAGE_SIZE);
         Specification<Order> spec = Specification.where(OrderSpecifications.hasStatus(status))
             .and(OrderSpecifications.createdAfter(from))
@@ -165,10 +166,13 @@ public class OrderService {
         List<UUID> orderIds = orders.getContent().stream().map(Order::getId).toList();
         Map<UUID, Long> itemCounts = orderIds.isEmpty() ? Map.of() : orderRepository.countItemsByOrderIds(orderIds).stream()
             .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
+        Map<UUID, PaymentStatus> paymentStatuses = orderIds.isEmpty() ? Map.of() : paymentRepository.findByOrderIdIn(orderIds).stream()
+            .collect(Collectors.toMap(p -> p.getOrder().getId(), Payment::getStatus));
 
-        return PageResponse.of(orders.map(o -> new OrderSummaryDto(
-            o.getId(), o.getOrderNumber(), o.getStatus(), itemCounts.getOrDefault(o.getId(), 0L),
-            o.getTotalPesewas(), o.getCreatedAt())));
+        return PageResponse.of(orders.map(o -> new AdminOrderSummaryDto(
+            o.getId(), o.getOrderNumber(), o.getDeliveryName(), o.getDeliveryPhone(), o.getDeliveryZoneName(),
+            itemCounts.getOrDefault(o.getId(), 0L), o.getTotalPesewas(),
+            paymentStatuses.getOrDefault(o.getId(), PaymentStatus.PENDING), o.getStatus(), o.getCreatedAt())));
     }
 
     public OrderDetailDto getForAdmin(UUID orderId) {

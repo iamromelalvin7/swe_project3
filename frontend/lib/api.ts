@@ -44,3 +44,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
   return res.json() as Promise<T>;
 }
+
+/** Same as apiFetch, with the caller's bearer token attached. */
+export function authFetch<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(path, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+  });
+}

@@ -1,5 +1,89 @@
 # Build Log
 
+## Phase 3 (continued) — Frontend
+
+### 3.17–3.19 — Cart, checkout, customer order history
+- `lib/cart.tsx`: a `CartProvider`/`useCart` context (same pattern as
+  Phase 2's `AuthProvider`) — centralizes `GET/POST/DELETE /api/cart*`
+  calls with the auth token attached, so `Header`'s cart badge,
+  `AddToCartButton`, and the cart page all share one source of truth
+  instead of duplicating fetch logic and drifting out of sync.
+- `lib/countdown.ts`: `useCountdown(expiresAt)` — client-ticking
+  MM:SS, used by `CartLineRow` for the live per-line hold countdown
+  (FR-D8).
+- `AddToCartButton` (Phase 2 left this inert pending the cart API) now
+  actually calls `useCart().addItem`.
+- `app/cart/`, `app/checkout/`, `app/checkout/confirm/`,
+  `app/orders/`, `app/orders/[id]/`: delivery form, zone/fee
+  calculation, payment method choice, Paystack redirect (when
+  `authorizationUrl` is present) vs. direct confirmation (cash on
+  delivery), order history, order detail with cancellation. The
+  `/checkout/confirm` route is exactly the `callback_url` Paystack
+  redirects the browser to — it calls `GET /api/checkout/verify`
+  itself and forwards to the order detail page (FR-E10: the redirect
+  triggers the ask, but the verify call is still what confirms it).
+
+### 3.20 — Admin order management
+- `app/admin/orders/`, `app/admin/orders/[id]/`: status-filtered list
+  matching FR-H1's exact column set, detail with the picking list and
+  a status-stepper + single "Mark as {next}" advance button (mirrors
+  the design's one-step-forward button, not a jump-to-any-status
+  picker) plus a cancel action.
+- **Backend gap found while building this**: `OrderSummaryDto` (built
+  for the *customer* order list) doesn't carry customer name/phone/zone/
+  payment status — fine for a customer viewing their own orders, but
+  FR-H1 explicitly requires all of those for the *admin* list. Added
+  `AdminOrderSummaryDto` and extended `OrderService.listForAdmin` to
+  batch-fetch payment status per page (same one-extra-query pattern as
+  the existing item-count batch, not per-row).
+
+### Deviation: admin section has no shared shell yet
+Design has a full sidebar (Dashboard / Products / Orders) wrapping the
+whole admin area, but Dashboard and admin Products UI don't exist yet
+(dashboard is Phase 4; admin product UI isn't itemized in any phase, per
+the earlier "have you built an admin side" conversation — flagged, not
+built). Building a sidebar that links to two non-existent pages would
+be inventing navigation the design doesn't specify for this state, so
+`/admin/orders` stands alone with the regular `Header` for now.
+
+### Real bug found by running the app: CORS on every authenticated route
+Registering/logging in worked from the browser back in Phase 2, but the
+very first authenticated call (`GET /api/cart`) failed in a real browser
+with a CORS error — curl never would have caught this, since curl
+doesn't send preflight requests. Root cause: `CorsConfig` was a
+`WebMvcConfigurer`, which only applies CORS headers at the MVC dispatch
+stage — *after* Spring Security's `authorizeHttpRequests` already runs.
+A CORS preflight `OPTIONS` request never carries the `Authorization`
+header, so every preflight to an authenticated route (`/api/cart`,
+`/api/orders`, `/api/checkout`, ...) was being rejected by
+`anyRequest().authenticated()` before the MVC layer ever got a chance to
+answer it. Phase 2 never surfaced this because its only client-side
+authenticated calls (admin product endpoints) were never exercised from
+the browser, only curl.
+
+Fixed by replacing the `WebMvcConfigurer` with a `CorsConfigurationSource`
+bean wired directly into `SecurityConfig` via `.cors(cors ->
+cors.configurationSource(...))`, so Spring Security's own CORS filter
+runs *before* authorization and short-circuits preflight requests
+correctly; also explicitly `permitAll` on `OPTIONS /**` as a second,
+independent guard. Verified with a raw preflight `curl -X OPTIONS
+/api/cart` (200, correct `Access-Control-Allow-*` headers) before
+re-running the full browser flow.
+
+### Verification
+Full live Playwright run against the real backend (Supabase-backed):
+register/login (already covered) → product page → add to cart → cart
+page with a real ticking countdown → checkout (cash on delivery) →
+`/checkout/confirm`-equivalent redirect to the order detail with the
+"Thank you" treatment, cart badge correctly reset to 0 → order history
+listing all prior orders with correct statuses → admin login → admin
+order list (all + status-filtered) → admin order detail → status
+advance (PATCH `200`, stepper and heading updated, verified twice in a
+row to confirm it wasn't a one-off) → cancel path exercised earlier in
+the backend section. Zero browser console errors across the whole run.
+`npx tsc --noEmit` clean, `next build` clean (all routes well under
+the 250 KB gzipped budget), `mvn test` 5/5.
+
 ## Phase 3 — Holds, checkout, orders (backend)
 
 ### 3.1–3.7 — Cart / holds
