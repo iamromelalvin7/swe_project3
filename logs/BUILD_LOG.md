@@ -1,5 +1,53 @@
 # Build Log
 
+## Real bug: every Paystack payment confirmation was silently failing
+
+Reported by the project owner: every real payment, whether it went
+through fine on Paystack's side (customer charged, receipt emailed),
+still showed `/checkout/confirm` as "We couldn't confirm that payment —
+An unexpected error occurred." — the generic `INTERNAL_ERROR` fallback
+from `GlobalExceptionHandler`'s catch-all, not one of the specific typed
+`ApiException`s.
+
+**Root cause**: `CheckoutService.verify()` and `.processWebhook()` were
+never annotated `@Transactional`. `spring.jpa.open-in-view=false` and
+both `Payment.order` and `Order.user` are `LAZY` — so
+`payment.getOrder().getUser().getId()` (the ownership check in `verify`)
+and `payment.getOrder().getStatus()`/`.getId()` (inside
+`applyVerification`, called by both `verify` and `processWebhook`) were
+accessing a lazy proxy *after* the repository call that fetched it had
+already closed its Hibernate session, throwing
+`LazyInitializationException` on every single call — deterministically,
+not intermittently, which matches "everytime" exactly. Because the
+exception fires on the ownership check, it happens *before*
+`applyVerification` ever runs, so the payment row is never marked `PAID`
+and the order never auto-advances `PENDING → CONFIRMED`, even though
+Paystack genuinely processed the charge — the charge and the database
+state are two entirely separate systems, and only the database side was
+broken. The webhook backstop (`PaystackWebhookController`) has the
+identical bug in `applyVerification`, but its handler wraps everything
+in `catch (Exception ignored)` and always returns `200` to Paystack —
+so the backstop wasn't rescuing anything either, it was silently eating
+the same failure and telling Paystack all was well.
+
+**Fix**: added `@Transactional` to both `CheckoutService.verify(...)`
+and `.processWebhook(...)` — the same pattern already used correctly
+everywhere else in `OrderService`. No schema change, no behaviour
+change beyond actually completing the work these methods were already
+supposed to do. `mvn test`: 4/5 (the one failure is the already-logged,
+unrelated `kojo.mensah@example.com` fixture collision from the 4.2
+seed).
+
+**Found while investigating**: 6 real orders in production currently
+have a `PAYSTACK` payment stuck at `PENDING` from before this fix,
+including two the project owner had already manually advanced to
+`DELIVERED` despite the payment never being recorded as confirmed.
+These need reconciling by re-running the (now-fixed) verify path
+against each real reference — not by hand-writing an `UPDATE`, since
+that would mean asserting a payment succeeded without actually checking
+with Paystack. Flagged to the project owner; not touched without
+explicit go-ahead given it's real financial state.
+
 ## Phase 4 — 4.5, mobile verification at 360px
 
 **Deviation, flagged up front**: "verified on a real device" was

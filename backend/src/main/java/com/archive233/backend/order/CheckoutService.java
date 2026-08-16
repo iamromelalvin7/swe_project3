@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.archive233.backend.error.ApiException;
 import com.archive233.backend.error.NotFoundException;
@@ -51,7 +52,17 @@ public class CheckoutService {
      * FR-E10: this is the sole source of truth for payment confirmation —
      * called by the frontend after the Paystack redirect, never trusting
      * the redirect itself.
+     *
+     * {@code @Transactional} is load-bearing here, not decorative:
+     * {@code payment.getOrder()} and {@code order.getUser()} are both LAZY
+     * and {@code spring.jpa.open-in-view=false}, so without an open session
+     * spanning this whole method every call threw {@code
+     * LazyInitializationException} on the ownership check below — after
+     * Paystack had already charged the customer, since that happens on
+     * Paystack's side regardless of what this method does afterward. The
+     * payment/order state was never being recorded as a result.
      */
+    @Transactional
     public OrderDetailDto verify(UUID userId, String reference) {
         Payment payment = paymentRepository.findByProviderReference(reference)
             .orElseThrow(() -> new NotFoundException("Payment not found."));
@@ -65,8 +76,13 @@ public class CheckoutService {
     /**
      * FR-E11/E12: the webhook backstop — not user-scoped (Paystack calls
      * this server-to-server), and idempotent regardless of how many times
-     * the same event is delivered.
+     * the same event is delivered. Same {@code @Transactional} reasoning
+     * as {@link #verify}: {@code applyVerification} touches the same lazy
+     * associations, and the caller ({@code PaystackWebhookController})
+     * swallows exceptions silently, so this path was failing exactly the
+     * same way without ever surfacing an error to anyone.
      */
+    @Transactional
     public void processWebhook(String reference) {
         paymentRepository.findByProviderReference(reference)
             .ifPresent(payment -> applyVerification(payment, paystackService.verify(reference)));
