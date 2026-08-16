@@ -17,16 +17,24 @@ function AdminOrdersInner() {
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") ?? "";
   const [orders, setOrders] = useState<AdminOrderSummary[] | null>(null);
+  const [error, setError] = useState(false);
+
+  const load = () => {
+    if (user?.role !== "ADMIN") return;
+    setError(false);
+    const qs = statusFilter ? `?status=${statusFilter}` : "";
+    authFetch<PageResponse<AdminOrderSummary>>(`/api/admin/orders${qs}`, user.token)
+      .then((res) => setOrders(res.items))
+      .catch(() => setError(true));
+  };
 
   useEffect(() => {
     if (ready && (!user || user.role !== "ADMIN")) {
       router.push("/login?redirect=/admin/orders");
       return;
     }
-    if (user?.role === "ADMIN") {
-      const qs = statusFilter ? `?status=${statusFilter}` : "";
-      authFetch<PageResponse<AdminOrderSummary>>(`/api/admin/orders${qs}`, user.token).then((res) => setOrders(res.items));
-    }
+    setOrders(null);
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, statusFilter]);
 
@@ -48,6 +56,30 @@ function AdminOrdersInner() {
             </button>
           ))}
         </div>
+
+        {!orders && !error && (
+          <div className="border-t border-rule py-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="border-b border-rule py-4">
+                <div className="h-2.5 w-full max-w-[600px] animate-pulse bg-skeleton" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="border-t border-rule py-20 text-center">
+            <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
+            <div className="mb-2.5 font-serif text-[28px]">Orders did not load</div>
+            <div className="mb-6 text-sm text-grey">The shop is reachable but the listing request failed.</div>
+            <button
+              onClick={load}
+              className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
+            >
+              Try again
+            </button>
+          </div>
+        )}
 
         {orders && orders.length === 0 && <div className="border-t border-rule py-16 text-center text-sm text-grey">No orders match.</div>}
 

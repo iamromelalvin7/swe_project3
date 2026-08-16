@@ -9,6 +9,7 @@ type CartContextValue = {
   lines: CartLine[];
   count: number;
   loading: boolean;
+  error: boolean;
   refresh: () => Promise<void>;
   addItem: (productId: string, quantity: number) => Promise<CartLine[]>;
   removeItem: (productId: string) => Promise<CartLine[]>;
@@ -20,6 +21,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -27,9 +29,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setLoading(true);
+    setError(false);
     try {
       const cart = await authFetch<CartLine[]>("/api/cart", user.token);
       setLines(cart);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -70,7 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const count = lines.filter((l) => new Date(l.expiresAt).getTime() > Date.now()).length;
 
   return (
-    <CartContext.Provider value={{ lines, count, loading, refresh, addItem, removeItem }}>
+    <CartContext.Provider value={{ lines, count, loading, error, refresh, addItem, removeItem }}>
       {children}
     </CartContext.Provider>
   );

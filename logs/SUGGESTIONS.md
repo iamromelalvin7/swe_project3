@@ -1,5 +1,12 @@
 ﻿# Suggestions — logged, not acted on
 
+- **A few detail (non-list) pages still don't catch fetch errors** —
+  `app/admin/orders/[id]/page.tsx` and `app/checkout/page.tsx`'s
+  delivery-zone fetch have no `.catch`, so a failed request leaves them
+  stuck on their loading state forever with an unhandled rejection in
+  the console. Out of 4.4's literal scope (that objective is about
+  lists), but the same class of gap fixed there for
+  cart/orders/admin-orders/admin-dashboard — worth doing here too.
 - **`AuthApiTest` runs against live Supabase, not an isolated test
   schema/database.** It generally works because its fixture emails are
   meant to be fresh, but Phase 4's order-history seed registered a real

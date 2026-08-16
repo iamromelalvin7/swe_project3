@@ -1,5 +1,41 @@
 # Build Log
 
+## Phase 4 — 4.4, list loading/empty/error states
+
+Audited every list view for NFR-U2's three states. `/products` already
+had all three from Phase 2 (`loading.tsx`/`error.tsx`, the catalog's own
+empty state). Everything else was fetched client-side with `useEffect`
++ `useState` and had **no error handling at all** — a failed request
+just left the page silently stuck on whatever it was rendering before
+(usually a blank area or bare "Loading…" text), with an unhandled
+promise rejection in the console. Found across every remaining list:
+`lib/cart.tsx` (and therefore `/cart`), `/orders`, `/admin/orders`,
+`/admin/dashboard`'s awaiting-action table.
+
+Fixed all four the same way, reusing the exact visual language already
+established in `app/products/error.tsx`/`loading.tsx` (signal-coloured
+"Request failed" label, serif headline, "Try again" button calling the
+same reload function; pulsing `bg-skeleton` blocks for loading) rather
+than inventing a new pattern per page:
+- `lib/cart.tsx`: added an `error` flag to `CartContext`, `refresh()`
+  now catches instead of letting the rejection propagate.
+- `app/cart/page.tsx`, `app/orders/page.tsx`, `app/admin/orders/page.tsx`,
+  `app/admin/dashboard/page.tsx`: each now has a real skeleton while the
+  first fetch is in flight (previously: nothing, or plain text), a
+  "Try again" error state calling the same load function on failure
+  (previously: none — the page would hang forever on any real error),
+  and the existing empty states kept as-is.
+
+Scoped to actual list views per 4.4's literal wording — a couple of
+detail (single-record) pages have the identical gap and are flagged in
+SUGGESTIONS.md rather than fixed here, since they're out of this
+objective's scope.
+
+Verified live against production by intercepting each endpoint with
+Playwright (`route.fulfill({status:500})`) to force a real failure and
+confirm the error UI actually renders and "Try again" recovers — not
+just reading the code and assuming it works.
+
 ## Phase 4 — 4.3, admin dashboard
 
 Objective 4.3's wording ("revenue, order count, items sold, live stock,

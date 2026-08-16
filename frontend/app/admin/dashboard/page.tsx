@@ -13,22 +13,57 @@ export default function AdminDashboardPage() {
   const { ready, user } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<AdminDashboard | null>(null);
+  const [error, setError] = useState(false);
+
+  const load = () => {
+    if (user?.role !== "ADMIN") return;
+    setError(false);
+    authFetch<AdminDashboard>("/api/admin/dashboard", user.token)
+      .then(setData)
+      .catch(() => setError(true));
+  };
 
   useEffect(() => {
     if (ready && (!user || user.role !== "ADMIN")) {
       router.push("/login?redirect=/admin/dashboard");
       return;
     }
-    if (user?.role === "ADMIN") {
-      authFetch<AdminDashboard>("/api/admin/dashboard", user.token).then(setData);
-    }
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user]);
+
+  if (error) {
+    return (
+      <AdminShell>
+        <div className="py-24 text-center">
+          <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
+          <div className="mb-2.5 font-serif text-[28px]">The dashboard did not load</div>
+          <div className="mb-6 text-sm text-grey">The shop is reachable but the overview request failed.</div>
+          <button
+            onClick={load}
+            className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
+          >
+            Try again
+          </button>
+        </div>
+      </AdminShell>
+    );
+  }
 
   if (!data) {
     return (
       <AdminShell>
-        <div className="py-24 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Loading…</div>
+        <div>
+          <h1 className="mb-8 font-serif text-[56px] max-[640px]:text-[38px]">Overview</h1>
+          <div className="grid grid-cols-2 border-y border-rule min-[900px]:grid-cols-[1.5fr_1fr_1fr_1fr]">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={`py-6 pl-4 min-[900px]:py-[26px] min-[900px]:pl-6 ${i > 0 ? "border-l border-rule" : ""}`}>
+                <div className="h-2.5 w-[70%] animate-pulse bg-skeleton" />
+                <div className="mt-4 h-6 w-[50%] animate-pulse bg-skeleton" />
+              </div>
+            ))}
+          </div>
+        </div>
       </AdminShell>
     );
   }

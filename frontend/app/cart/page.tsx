@@ -10,7 +10,7 @@ import { formatMoney } from "@/lib/money";
 
 export default function CartPage() {
   const { ready, user } = useAuth();
-  const { lines, loading } = useCart();
+  const { lines, loading, error, refresh } = useCart();
   const router = useRouter();
 
   if (ready && !user) {
@@ -27,7 +27,35 @@ export default function CartPage() {
       <div className="px-14 pt-11 pb-[120px] max-[640px]:px-5 max-[640px]:pt-7">
         <h1 className="mb-9 font-serif text-[56px] max-[640px]:text-[38px]">Cart</h1>
 
-        {!loading && lines.length === 0 && (
+        {loading && lines.length === 0 && (
+          <div className="border-t border-rule py-8">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-5 border-b border-rule py-5">
+                <div className="aspect-[3/4] w-20 flex-shrink-0 animate-pulse rounded-[4px] bg-skeleton" />
+                <div className="flex-1">
+                  <div className="h-2.5 w-[40%] animate-pulse bg-skeleton" />
+                  <div className="mt-3 h-2.5 w-[25%] animate-pulse bg-skeleton" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="border-t border-rule py-20 text-center">
+            <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
+            <div className="mb-2.5 font-serif text-[28px]">Your cart did not load</div>
+            <div className="mb-6 text-sm text-grey">The shop is reachable but the cart request failed.</div>
+            <button
+              onClick={refresh}
+              className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && lines.length === 0 && (
           <div className="border-t border-rule py-20">
             <div className="mb-2.5 font-serif text-[26px]">Your cart is empty</div>
             <div className="mb-6 text-sm text-grey">Holds last ten minutes from the moment you add a piece.</div>
@@ -40,7 +68,7 @@ export default function CartPage() {
           </div>
         )}
 
-        {lines.length > 0 && (
+        {!error && lines.length > 0 && (
           <div className="grid grid-cols-[1fr_320px] items-start gap-14 max-[900px]:grid-cols-1">
             <div>
               {lines.map((line) => (

@@ -13,15 +13,22 @@ export default function OrdersPage() {
   const { ready, user } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<OrderSummary[] | null>(null);
+  const [error, setError] = useState(false);
+
+  const load = () => {
+    if (!user) return;
+    setError(false);
+    authFetch<PageResponse<OrderSummary>>("/api/orders", user.token)
+      .then((res) => setOrders(res.items))
+      .catch(() => setError(true));
+  };
 
   useEffect(() => {
     if (ready && !user) {
       router.push("/login?redirect=/orders");
       return;
     }
-    if (user) {
-      authFetch<PageResponse<OrderSummary>>("/api/orders", user.token).then((res) => setOrders(res.items));
-    }
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user]);
 
@@ -30,6 +37,31 @@ export default function OrdersPage() {
       <Header />
       <div className="px-14 pt-11 pb-[120px] max-[640px]:px-5 max-[640px]:pt-7">
         <h1 className="mb-9 font-serif text-[56px] max-[640px]:text-[38px]">My orders</h1>
+
+        {!orders && !error && (
+          <div className="border-t border-rule py-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="border-b border-rule py-6">
+                <div className="h-2.5 w-[30%] animate-pulse bg-skeleton" />
+                <div className="mt-3 h-2.5 w-[15%] animate-pulse bg-skeleton" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <div className="border-t border-rule py-20 text-center">
+            <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
+            <div className="mb-2.5 font-serif text-[28px]">Your orders did not load</div>
+            <div className="mb-6 text-sm text-grey">The shop is reachable but the listing request failed.</div>
+            <button
+              onClick={load}
+              className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
+            >
+              Try again
+            </button>
+          </div>
+        )}
 
         {orders && orders.length === 0 && (
           <div className="border-t border-rule py-20">
