@@ -48,6 +48,33 @@ that would mean asserting a payment succeeded without actually checking
 with Paystack. Flagged to the project owner; not touched without
 explicit go-ahead given it's real financial state.
 
+**Verified and reconciled** after deploying the fix. Cross-checked each
+stuck reference against Paystack's own `/transaction/verify` API
+directly (independent of this app's interpretation of it) before acting
+on any of them:
+- `AR-WRGTU7A2` — Paystack's own record says `status: failed`
+  ("Declined. Please use the test mobile money number...") — the app
+  now correctly marks this payment `FAILED`, not `PAID`. This is the
+  *correct* outcome, not a bug; it happened to be the first one checked
+  and confirms the fix doesn't just blindly mark everything paid.
+- `AR-URCEVPV3`, `AR-K98J74NG`, `AR-EEFEPDYU`, `AR-3MK58UCC` — all four
+  genuinely succeeded on Paystack's side (`status: success`, amounts
+  matched exactly). Reconciled by POSTing a real HMAC-signed webhook
+  payload for each (computed with the real `PAYSTACK_SECRET_KEY`,
+  exactly what Paystack itself would send) rather than hand-writing an
+  `UPDATE` — the fixed code path is what actually re-verified each one
+  against Paystack and decided the outcome, nothing was asserted by
+  hand. All four now show `payment.status = PAID`; the two that were
+  still `PENDING` correctly auto-advanced to `CONFIRMED`.
+- **One needs the project owner's attention, not code**: `AR-3MK58UCC`'s
+  order was already `CANCELLED` before its payment got reconciled.
+  `applyVerification` only auto-advances an order that's still
+  `PENDING`, so marking the payment `PAID` correctly left the order
+  status alone rather than resurrecting a cancelled order — but that
+  leaves a cancelled order with a paid payment on record, which is a
+  real-world "this needs a refund" situation, not something the app can
+  or should decide on its own.
+
 ## Phase 4 — 4.5, mobile verification at 360px
 
 **Deviation, flagged up front**: "verified on a real device" was
