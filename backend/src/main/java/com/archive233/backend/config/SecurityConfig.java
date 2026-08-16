@@ -51,6 +51,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/delivery-zones").permitAll()
+                .requestMatchers("/api/webhooks/**").permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex

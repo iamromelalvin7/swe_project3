@@ -1,5 +1,146 @@
 # Build Log
 
+## Phase 3 — Holds, checkout, orders (backend)
+
+### 3.1–3.7 — Cart / holds
+- `cart/` package: `CartItem` (composite `@EmbeddedId` matching the
+  schema's `(user_id, product_id)` PK), `CartItemRepository` mixes normal
+  JPA reads with **native** queries for the three schema-critical
+  operations (hard rule 4): `SELECT stock_quantity ... FOR UPDATE`,
+  the verbatim `INSERT ... ON CONFLICT ... DO UPDATE` hold claim, and the
+  sweeper's bulk delete. The `ON CONFLICT` statement's interval is
+  parameterised from `CART_HOLD_MINUTES` rather than the schema comment's
+  literal `'10 minutes'` — that env var exists specifically to make it
+  configurable; flagged before implementing.
+- `CartService.addItem`: locks the product row, computes availability as
+  `stock_quantity − SUM(other users' live holds)` — deliberately excludes
+  the caller's own existing hold, since `ON CONFLICT DO UPDATE` *replaces*
+  their line rather than adding to it. Effective cap is `min(available, 5)`;
+  exceeding it is a 409 naming the shortfall (FR-D5/D6 read together).
+  "Renew hold" isn't a separate endpoint — re-POSTing the same product/qty
+  refreshes `expires_at` via the same `ON CONFLICT` claim.
+- `GET /api/cart` returns every line including expired-but-unswept ones
+  (the design shows "Hold expired · Renew" rather than hiding them) —
+  only *other* users' availability excludes a lapsed hold, immediately,
+  via the view.
+- `CartSweeper`: `@Scheduled` bulk delete, hygiene only (FR-D11) —
+  correctness never depends on it running.
+
+### 3.8, 3.13–3.14 — Checkout core, customer orders
+- `order/` package: `Order`/`OrderItem`/`OrderStatusHistory`/`Payment`
+  entities (exact schema match), `OrderService.placeOrder` — one
+  `@Transactional` method: re-validates every hold hasn't expired,
+  snapshots delivery fields and item fields onto `orders`/`order_items`,
+  runs the exact conditional stock-decrement `UPDATE` per line (409 on
+  any zero-row result, rolling back the whole order — not just that
+  line), clears the cart. Order numbers are a random 8-char code
+  (`AR-XXXXXXXX`, ambiguous characters excluded) with a collision-retry
+  loop — no DB sequence needed, so no schema change to propose.
+- Customer `GET /api/orders`, `GET /api/orders/{id}` (403 if not the
+  owner), `POST /api/orders/{id}/cancel` (PENDING/CONFIRMED only, returns
+  stock via an atomic `+` update, same reasoning as the decrement).
+- `GET /api/delivery-zones` — not a named objective, same category as
+  Phase 2's `/api/catalog/filters`: required plumbing for checkout's zone
+  picker.
+
+### 3.9–3.12 — Payment
+- `payment/` package: `PaystackService` (`RestClient`-based, mirrors
+  `SupabaseStorageClient`'s pattern) — `initialize` (amount in pesewas,
+  our own generated reference, `callback_url` built from the new
+  `FRONTEND_URL` env var — confirmed before adding it), `verify`
+  (FR-E10 — the sole source of truth), `verifySignature` (HMAC-SHA512
+  over the *raw* request body, not a re-serialized one).
+- `CheckoutService` orchestrates: `OrderService.placeOrder` (the DB
+  transaction) happens first and fully commits, *then* the Paystack HTTP
+  call happens outside any transaction — an external API call has no
+  business holding a DB connection open.
+- `PaystackWebhookController`: reads the raw body as a `String`
+  specifically so signature verification sees exactly what Paystack sent;
+  re-verifies via Paystack's own API using the reference from the
+  payload rather than trusting the payload's embedded status (FR-E10's
+  spirit applies to the webhook too). `CheckoutService.applyVerification`
+  is idempotent — an already-PAID payment short-circuits (FR-E12).
+- Cash on delivery: same `placeOrder` path, simply skips the Paystack
+  call and leaves `provider_reference` null.
+
+### 3.15–3.16 — Admin orders
+- `AdminOrderController`: list (status + date range, paginated), detail
+  (full picking list), `PATCH .../status` enforcing the transition table
+  in `OrderService` — a `Map<OrderStatus, Set<OrderStatus>>`, DELIVERED
+  and CANCELLED terminal, any non-terminal status can move to CANCELLED
+  (which also returns stock), everything else illegal → 409. Every
+  transition writes `order_status_history`.
+
+### Deviations and real bugs found by running the app, not just reading it
+1. Used HTTP `POST .../cancel` rather than `DELETE` for order
+   cancellation — `DELETE` would misleadingly imply removing a row, and
+   hard rule 6 bans hard deletes system-wide; the verb should say what it
+   does even though the underlying operation was never going to delete
+   anything.
+2. **Startup crash**: `OrderSummaryDto`'s `itemCount` was declared `int`
+   but the JPQL constructor expression fed it a correlated-subquery
+   `COUNT(...)`, which Hibernate returns as `Long` — "Missing constructor
+   for type" at context startup. Fixed the field type; while investigating,
+   found the subquery-in-constructor-expression itself also broke
+   PostgreSQL's ability to infer types for the *other* bind parameters in
+   the same query (`could not determine data type of parameter $3`) —
+   the same family of bug as Phase 2's `lower(bytea)` fix, triggered a
+   different way. Rewrote as `LEFT JOIN ... GROUP BY` instead of a
+   subquery for the customer order list, which resolved it there.
+3. The **admin** order list had the identical symptom even after the
+   `GROUP BY` rewrite, this time from the `status`/`fromDate`/`toDate`
+   optional-filter pattern itself (`(:status IS NULL OR o.status =
+   :status)`) — a `cast(... as string)` fix (same pattern that worked for
+   Phase 2's search box) got further (app started) but then failed at
+   runtime with `cannot cast type bytea to timestamp with time zone`,
+   proving the parameter was defaulting to `bytea` *before* the cast ever
+   ran. Having now hit this exact PgJDBC/Supavisor class of bug three
+   times, stopped patching case-by-case and rewrote admin order search
+   using Spring Data JPA Specifications (`OrderSpecifications`) — a
+   predicate is only ever added for a filter that's actually present, so
+   an absent filter never reaches Postgres as an ambiguous parameter at
+   all. Item counts for the resulting page are batched into one extra
+   query keyed by order id (not per-row — still no N+1).
+4. Local backend startup failures during this session were mostly the
+   above real bugs, not transient — the project owner hit them running
+   locally too. One later failure (`This connection has been closed` /
+   `Unable to determine Dialect`) *was* transient — the Supavisor pooler
+   dropped mid-handshake after several rapid restarts — and cleared on
+   retry with no code change.
+
+### Verification
+Ran the full flow live against Supabase: register/login → add to cart →
+409 on requesting more than available → checkout (cash on delivery) →
+cart cleared, stock decremented, order visible in customer history →
+admin list/detail/status-advance → illegal transition rejected (409) →
+**the concurrency proof** (below) → cancellation returns stock → repeat
+cancellation rejected (409). `mvn test` still 4/4 after all of the above.
+
+**Concurrency proof.** The cart-hold mechanism's own `FOR UPDATE` guard
+already prevents two *different* customers from both holding a product's
+last unit — that's correct, intended behavior (FR-D2), not a gap. So the
+literal "two browsers, one product, `stock_quantity = 1`" scenario can't
+occur through the hold system by design; the guarantee NFR-R2 actually
+describes lives at the checkout stock-decrement step. Proved it there
+instead: one customer held the sole unit, then two `POST /api/checkout`
+calls were fired truly simultaneously (backgrounded, `wait`ed together)
+against that single hold.
+
+```
+--- RESPONSE 1 ---
+{"order":{"orderNumber":"AR-QT7KWVB5","status":"PENDING", ...}}
+HTTP_STATUS:201
+--- RESPONSE 2 ---
+{"error":{"code":"OUT_OF_STOCK","message":"'Concurrency Proof Jeans' sold out while you were checking out."}}
+HTTP_STATUS:409
+```
+```
+SELECT stock_quantity FROM products WHERE id = 'adf1fd62-...';
+ stock_quantity
+----------------
+              0
+```
+
 ## Phase 2 (continued) — Deployment
 
 Pushed, asked the project owner to redeploy both Render and Vercel manually

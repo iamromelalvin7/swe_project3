@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -87,4 +88,21 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
         ORDER BY p.sizeLabel
         """)
     List<String> findDistinctPublishedSizeLabels();
+
+    // --- REFERENCE — verbatim from db/01_schema.sql (hard rule 4) ---
+    // Optimistic; zero rows affected means someone else won the race.
+
+    @Modifying
+    @Query(value = """
+        UPDATE products
+           SET stock_quantity = stock_quantity - :quantity
+         WHERE id = :productId
+           AND stock_quantity >= :quantity
+        """, nativeQuery = true)
+    int decrementStockIfAvailable(@Param("productId") UUID productId, @Param("quantity") int quantity);
+
+    @Modifying
+    @Query(value = "UPDATE products SET stock_quantity = stock_quantity + :quantity WHERE id = :productId",
+        nativeQuery = true)
+    void incrementStock(@Param("productId") UUID productId, @Param("quantity") int quantity);
 }
