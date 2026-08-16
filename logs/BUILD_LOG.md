@@ -34,7 +34,11 @@ objective's scope.
 Verified live against production by intercepting each endpoint with
 Playwright (`route.fulfill({status:500})`) to force a real failure and
 confirm the error UI actually renders and "Try again" recovers — not
-just reading the code and assuming it works.
+just reading the code and assuming it works. All four
+(`/admin/dashboard`, `/admin/orders`, `/orders`, `/cart`) rendered the
+correct "Request failed" treatment; delaying the dashboard response by
+3s also confirmed the metric-grid skeleton renders correctly mid-flight,
+not just the final state.
 
 ## Phase 4 — 4.3, admin dashboard
 
