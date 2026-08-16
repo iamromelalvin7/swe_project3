@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Archive 233 - Product Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&amp;family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#615e5b",
+                      "surface-container-high": "#e9e8e5",
+                      "surface-bright": "#faf9f6",
+                      "hairline": "#E4E1DA",
+                      "surface": "#faf9f6",
+                      "tertiary-container": "#1b1b1d",
+                      "on-surface-variant": "#4c4640",
+                      "surface-container-low": "#f4f3f1",
+                      "tertiary-fixed-dim": "#c8c6c8",
+                      "on-secondary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "on-primary-fixed": "#1d1b19",
+                      "on-secondary-container": "#68645b",
+                      "secondary-fixed": "#e9e2d6",
+                      "error": "#ba1a1a",
+                      "primary": "#000000",
+                      "outline-variant": "#cec5bd",
+                      "secondary": "#625e55",
+                      "surface-variant": "#e3e2e0",
+                      "inverse-primary": "#cbc5c2",
+                      "on-background": "#1a1c1a",
+                      "on-primary-container": "#888380",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#efeeeb",
+                      "on-secondary-fixed": "#1e1b14",
+                      "surface-container-highest": "#e3e2e0",
+                      "on-surface": "#1a1c1a",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-on-surface": "#f2f1ee",
+                      "outline": "#7d766f",
+                      "primary-container": "#1d1b19",
+                      "on-secondary-fixed-variant": "#4a463e",
+                      "tertiary": "#000000",
+                      "signal": "#B23A20",
+                      "on-tertiary-container": "#858386",
+                      "inverse-surface": "#2f312f",
+                      "image-plate": "#FFFFFF",
+                      "on-error-container": "#93000a",
+                      "on-tertiary-fixed": "#1b1b1d",
+                      "on-tertiary-fixed-variant": "#474649",
+                      "tertiary-fixed": "#e5e1e4",
+                      "primary-fixed-dim": "#cbc5c2",
+                      "secondary-container": "#e9e2d6",
+                      "secondary-fixed-dim": "#ccc6bb",
+                      "on-tertiary": "#ffffff",
+                      "background": "#faf9f6",
+                      "primary-fixed": "#e8e1dd",
+                      "surface-dim": "#dbdad7",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed-variant": "#494643"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-mobile": "20px",
+                      "unit": "8px",
+                      "gutter": "32px",
+                      "margin-desktop": "64px"
+              },
+              "fontFamily": {
+                      "metadata-label": [
+                              "Archivo Narrow"
+                      ],
+                      "body-sm": [
+                              "Archivo Narrow"
+                      ],
+                      "headline-md": [
+                              "Libre Caslon Text"
+                      ],
+                      "display-lg": [
+                              "Libre Caslon Text"
+                      ],
+                      "body-base": [
+                              "Archivo Narrow"
+                      ],
+                      "data-mono": [
+                              "IBM Plex Mono"
+                      ],
+                      "display-lg-mobile": [
+                              "Libre Caslon Text"
+                      ]
+              },
+              "fontSize": {
+                      "metadata-label": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "64px",
+                              {
+                                      "lineHeight": "72px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-base": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "data-mono": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "40px",
+                              {
+                                      "lineHeight": "48px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+</head>
+<body class="bg-background text-on-background antialiased min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-margin-mobile h-16 w-full z-50 sticky top-0 bg-background border-b border-hairline">
+<button aria-label="Menu" class="hover:opacity-70 transition-opacity flex items-center justify-center p-2 -ml-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md-mobile tracking-tighter text-primary truncate px-4">Archive 233</h1>
+<div class="flex items-center gap-2 -mr-2">
+<button aria-label="Search" class="hover:opacity-70 transition-opacity flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="search">search</span>
+</button>
+<button aria-label="Shopping Bag" class="hover:opacity-70 transition-opacity flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="shopping_bag">shopping_bag</span>
+</button>
+</div>
+</header>
+<!-- Filter/Sort Row -->
+<div class="px-margin-mobile py-4 sticky top-16 bg-background z-40 flex justify-between items-center overflow-x-auto no-scrollbar border-b border-hairline md:border-none md:justify-start md:gap-8 md:px-margin-desktop md:py-8">
+<div class="flex items-center gap-4 whitespace-nowrap min-w-max md:hidden">
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                CATEGORY <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                SIZE <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                BRAND <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                CONDITION <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                PRICE <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+<div class="hidden md:flex gap-8 w-full border-y border-hairline py-4">
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                CATEGORY <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                SIZE <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                BRAND <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                CONDITION <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="font-metadata-label text-metadata-label uppercase text-primary flex items-center gap-1 hover:opacity-70">
+                PRICE <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<div class="ml-auto">
+<button class="font-data-mono text-data-mono text-secondary hover:text-primary transition-colors flex items-center gap-1">
+                    Sort: Newest <span class="material-symbols-outlined text-[16px]" data-icon="sort">sort</span>
+</button>
+</div>
+</div>
+<button class="font-data-mono text-data-mono text-secondary ml-4 pl-4 border-l border-hairline md:hidden whitespace-nowrap">
+            Sort: Newest
+        </button>
+</div>
+<!-- Main Content Canvas -->
+<main class="px-margin-mobile md:px-margin-desktop py-8 md:py-16">
+<!-- Product Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-gutter gap-y-12">
+<!-- Item 1 (Available) -->
+<article class="group cursor-pointer">
+<div class="bg-image-plate aspect-[3/4] relative mb-4 overflow-hidden">
+<span class="absolute top-2 left-2 font-data-mono text-data-mono text-primary z-10 bg-image-plate/80 px-1 backdrop-blur-sm">001</span>
+<img class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out" data-alt="A meticulously curated flat lay of a vintage Carhartt Detroit Jacket in a faded, worn brown canvas. The jacket shows authentic signs of wear and distressing, particularly along the seams and cuffs. It is photographed on a pristine, bright white gallery background, illuminated by soft, even, high-key studio lighting that emphasizes the texture of the heavy fabric without creating harsh shadows. The aesthetic is clean, minimalist, and editorial, focusing entirely on the garment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBR2RBULidtwPyPMwMYmD3ync3DGqyuXlOrKVZKvCigB7q4Sf0Q0T9eJp4Y_O7pqkwOLmiFnBTrIWrRGMhr4xm-r9ExtwcKxFFCnFe0xJE-a8vNEXOfbqV7ZzQlh-cQJlpGuckQfDhl5UoMmGuIfxm2gHwI7m3OFt4xc-ndES_LnE2oXagMKSfbtV4NUAU9KayyAyvYU-t0Y87I3u2qglaJUwXO20jvusIwPOx3sFdZi0Oji0n-VQdjJg"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest">
+                        CARHARTT · XL · EXCELLENT
+                    </div>
+<h2 class="font-body-base text-body-base text-primary leading-tight truncate">Vintage Detroit Jacket</h2>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-data-mono text-data-mono text-primary">GH₵ 450.00</span>
+</div>
+<div class="font-data-mono text-[10px] text-signal mt-1 uppercase tracking-wider">
+                        1 LEFT
+                    </div>
+</div>
+</article>
+<!-- Item 2 (Reserved) -->
+<article class="group cursor-pointer">
+<div class="bg-image-plate aspect-[3/4] relative mb-4 overflow-hidden opacity-55">
+<span class="absolute top-2 left-2 font-data-mono text-data-mono text-primary z-10 bg-image-plate/80 px-1 backdrop-blur-sm">002</span>
+<img class="w-full h-full object-cover" data-alt="A pair of well-worn, vintage Levi's 501 jeans in a light to medium blue wash, laid flat against a stark white background. The denim exhibits natural fading and subtle whiskering across the lap. The lighting is bright and even, creating a highly polished, editorial lookbook style. The image has a slightly muted, desaturated quality to reflect its reserved status in the catalog." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGPmuUE95TWQyDA_JC_QOqil3rd9n7oztlb0sa4qsrzRXABrlqh6yz_-AfZJveylt3xX2UwG17Wxe7j31YAWzy_Ko65C9_2hNusJfsf6sPHAuak_Z_cr7VE8fpF1KA_jxvAsZpjGMNY8cyMXZXd8aj-2wwSSf1ogRGKVt8lRNHXXlzgC4Sew-Y2eUQQff6fU7dsRTGDe9U72lKUWnxygZx7mhXfJxnVdx4zxixNQ2JCBSpil8EPX2mPw"/>
+<div class="absolute inset-0 bg-surface/20 flex items-center justify-center">
+</div>
+</div>
+<div class="flex flex-col gap-1 opacity-75">
+<div class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest">
+                        LEVI'S · 32x32 · VINTAGE
+                    </div>
+<h2 class="font-body-base text-body-base text-primary leading-tight truncate">501 Vintage Wash</h2>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-data-mono text-data-mono text-primary">GH₵ 320.00</span>
+</div>
+<div class="font-data-mono text-[10px] text-secondary mt-1 uppercase tracking-wider flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary inline-block"></span> RESERVED · 07:12
+                    </div>
+</div>
+</article>
+<!-- Item 3 (Sold Out) -->
+<article class="group cursor-not-allowed">
+<div class="bg-image-plate aspect-[3/4] relative mb-4 overflow-hidden grayscale opacity-40">
+<span class="absolute top-2 left-2 font-data-mono text-data-mono text-primary z-10 bg-image-plate/80 px-1 backdrop-blur-sm">003</span>
+<img class="w-full h-full object-cover" data-alt="A flat lay photograph of dark navy Dickies 874 work pants on a pure white background. The pants are neatly folded, showcasing their straight leg cut and sturdy twill fabric. The lighting is clinical and uniform, typical of high-end e-commerce photography. The entire image is rendered in grayscale to indicate that the item is no longer available, contributing to a stark, archival aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDN09DILbef5gyI3XRY3BU0f-JbGPF2NraVBoPoeeORm47W0o9z32vDoqrsWsEpbpJXa1qKlmZSuWkIlrBg4BDxGont0FguKTAMi9RRsSkJWiPjUSKq92L_tXJ0zzxOrpY-CSgtrNPr353qmVwQevAYPtutwcvkGEHBlzx42l7xbZ_MGmSwXbE7gAXAbHGLiMXc4hBQLiW3XqNTDGojLHA5x9SlnKyzSF5jdYboHLKGhMNSlPa1PwrnAQ"/>
+</div>
+<div class="flex flex-col gap-1 opacity-50">
+<div class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest">
+                        DICKIES · 34x30 · GOOD
+                    </div>
+<h2 class="font-body-base text-body-base text-primary leading-tight truncate">874 Work Pants</h2>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-data-mono text-data-mono text-outline line-through">GH₵ 220.00</span>
+</div>
+<div class="font-data-mono text-[10px] text-primary mt-1 uppercase tracking-wider font-semibold">
+                        SOLD OUT
+                    </div>
+</div>
+</article>
+<!-- Item 4 (Available) -->
+<article class="group cursor-pointer">
+<div class="bg-image-plate aspect-[3/4] relative mb-4 overflow-hidden">
+<span class="absolute top-2 left-2 font-data-mono text-data-mono text-primary z-10 bg-image-plate/80 px-1 backdrop-blur-sm">004</span>
+<img class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out" data-alt="A single Nike Air Max 97 sneaker in the 'Silver Bullet' colorway, photographed from a sharp side profile angle against a seamless white background. The metallic silver upper gleams under precise, controlled studio lighting, highlighting the shoe's iconic wavy design lines and full-length visible air unit. The composition is stark, minimalist, and highly detailed, emphasizing the shoe as a collectible design object." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9qkeBQo3jV3qu7AuVOoUi7LJnnziN1wJOa5VvyQwGIqxqX3f_hwUt7IyiBwdH08gS_mYfgUaCPMC831ZYh2C-OycZIzyCL3TrkajANsRxyQAJp7UPVGyz63adWReSnNhLybkTRarm0xS33XzH-V69TJsZzQPuZwXFhgnWxSkvbz6II-ndFGvmHLCCYMcOUKOFt3NH1SDAHr3F3bp7JQ4tXAQcHBLs9OCMzs4v7Y2hDFxC8plPigY4aw"/>
+</div>
+<div class="flex flex-col gap-1">
+<div class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest">
+                        NIKE · US 10 · DEADSTOCK
+                    </div>
+<h2 class="font-body-base text-body-base text-primary leading-tight truncate">Air Max 97 'Silver Bullet'</h2>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-data-mono text-data-mono text-primary">GH₵ 650.00</span>
+</div>
+<div class="font-data-mono text-[10px] text-signal mt-1 uppercase tracking-wider">
+                        1 LEFT
+                    </div>
+</div>
+</article>
+</div>
+<div class="mt-24 flex justify-center">
+<button class="border border-primary text-primary px-12 py-4 font-metadata-label text-metadata-label uppercase tracking-widest hover:bg-primary hover:text-white transition-colors duration-300">
+                Load More Archive
+            </button>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 bg-background border-t border-hairline md:hidden">
+<a class="flex flex-col items-center justify-center text-primary border-t-2 border-primary pt-2 scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="storefront">storefront</span>
+<span class="font-metadata-label text-metadata-label uppercase tracking-widest">SHOP</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant pt-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="folder_open">folder_open</span>
+<span class="font-metadata-label text-metadata-label uppercase tracking-widest">ARCHIVE</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant pt-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="sell">sell</span>
+<span class="font-metadata-label text-metadata-label uppercase tracking-widest">SELL</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant pt-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-metadata-label text-metadata-label uppercase tracking-widest">ACCOUNT</span>
+</a>
+</nav>
+</body></html>

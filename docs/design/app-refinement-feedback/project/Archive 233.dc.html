@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+body{margin:0;background:#1A1815;font-family:Archivo,sans-serif;}
+a{color:#12100E;text-decoration:none;}
+a:hover{color:#8C877D;}
+input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit;}
+button{background:none;border:0;padding:0;cursor:pointer;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#12100E;}
+::selection{background:#E4E1DA;}
+@keyframes pulse{0%{opacity:.30}50%{opacity:.75}100%{opacity:.30}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#1A1815;font-family:Archivo,sans-serif;color:#12100E;overflow-x:auto">
+
+<div style="position:sticky;top:0;z-index:50;background:#12100E;color:#8C877D;display:flex;align-items:center;gap:20px;padding:0 16px;height:44px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;overflow-x:auto">
+  <span style="color:#FAF9F6;white-space:nowrap">Archive 233 · prototype</span>
+  <div style="display:flex;gap:14px;flex:1">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="6">
+      <button onClick="{{ n.go }}" style-hover="color:#FAF9F6" style="color:{{ n.color }};white-space:nowrap;letter-spacing:0.1em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 0">{{ n.label }}</button>
+    </sc-for>
+  </div>
+  <div style="display:flex;gap:2px;flex-shrink:0">
+    <button onClick="{{ setDesktop }}" style-hover="color:#FAF9F6" style="padding:5px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:{{ deskColor }};background:{{ deskBg }}">DESKTOP</button>
+    <button onClick="{{ setMobile }}" style-hover="color:#FAF9F6" style="padding:5px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;color:{{ mobColor }};background:{{ mobBg }}">MOBILE</button>
+  </div>
+</div>
+
+<div style="width:{{ frameW }};min-width:{{ frameW }};max-width:{{ frameMaxW }};margin:0 auto;background:#FAF9F6;min-height:calc(100vh - 44px)">
+
+  <sc-if value="{{ isStore }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 {{ padX }};height:{{ headH }};border-bottom:1px solid #E4E1DA">
+      <button onClick="{{ goCatalog }}" style-hover="color:#8C877D" style="font-family:'Instrument Serif',serif;font-size:{{ markSize }};letter-spacing:0.01em;color:#12100E">Archive 233</button>
+      <div style="display:flex;align-items:center;gap:22px">
+        <button onClick="{{ toggleSearch }}" aria-label="Search" style-hover="opacity:0.55" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center">
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#12100E" stroke-width="1.2"><circle cx="8" cy="8" r="6"></circle><line x1="12.5" y1="12.5" x2="17" y2="17"></line></svg>
+        </button>
+        <button onClick="{{ goCart }}" aria-label="Cart" style-hover="opacity:0.55" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="none" stroke="#12100E" stroke-width="1.2"><rect x="1" y="5" width="14" height="12"></rect><path d="M5 5V3.5A3 3 0 0 1 11 3.5V5"></path></svg>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#12100E">{{ cartCount }}</span>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:20px;padding:20px {{ padX }};border-bottom:1px solid #E4E1DA">
+          <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search title or brand" style="flex:1;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:8px 0;font-size:16px" />
+          <button onClick="{{ toggleSearch }}" aria-label="Close search" style-hover="opacity:0.55" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#12100E" stroke-width="1.3"><line x1="1.5" y1="1.5" x2="14.5" y2="14.5"></line><line x1="14.5" y1="1.5" x2="1.5" y2="14.5"></line></svg>
+          </button>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;flex-wrap:{{ filterWrap }};gap:0 {{ filterGap }};padding:0 {{ padX }};min-height:52px;border-bottom:1px solid #E4E1DA;position:relative;z-index:30">
+        <sc-for list="{{ filterDefs }}" as="f" hint-placeholder-count="5">
+          <div style="position:relative;flex-shrink:0">
+            <button onClick="{{ f.toggle }}" style-hover="color:#8C877D" style="display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ f.color }};height:44px">
+              <span>{{ f.text }}</span>
+              <span style="display:inline-block;width:0;height:0;border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-top:4px solid #8C877D"></span>
+            </button>
+            <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:44px;left:0;z-index:20;background:#FAF9F6;border:1px solid #E4E1DA;border-radius:2px;min-width:170px;padding:6px 0">
+                <sc-for list="{{ f.options }}" as="o" hint-placeholder-count="4">
+                  <button onClick="{{ o.pick }}" style-hover="background:#12100E;color:#FFFFFF" style="display:block;width:100%;text-align:left;padding:9px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:{{ o.color }}">{{ o.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="flex:1"></div>
+        <div style="position:relative;flex-shrink:0">
+          <button onClick="{{ toggleSort }}" style-hover="color:#8C877D" style="display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#12100E;height:44px">
+            <span>{{ sortText }}</span>
+            <span style="display:inline-block;width:0;height:0;border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-top:4px solid #8C877D"></span>
+          </button>
+          <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:44px;right:0;z-index:20;background:#FAF9F6;border:1px solid #E4E1DA;border-radius:2px;min-width:190px;padding:6px 0">
+              <sc-for list="{{ sortOptions }}" as="o" hint-placeholder-count="3">
+                <button onClick="{{ o.pick }}" style-hover="background:#12100E;color:#FFFFFF" style="display:block;width:100%;text-align:left;padding:9px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:{{ o.color }}">{{ o.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="padding:{{ gridPadY }} {{ padX }} 96px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:{{ gridPadY }}">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ resultCount }}</div>
+          <button onClick="{{ clearFilters }}" style-hover="color:#12100E" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;display:{{ clearShow }}">Clear filters</button>
+        </div>
+        <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:96px 0;text-align:center">
+            <div style="font-family:'Instrument Serif',serif;font-size:28px;margin-bottom:10px">Nothing matches</div>
+            <div style="font-size:14px;color:#8C877D;margin-bottom:26px">No pieces fit that combination of filters right now.</div>
+            <button onClick="{{ clearFilters }}" style-hover="color:#8C877D;border-bottom-color:#8C877D" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid #12100E;padding-bottom:3px">Clear filters</button>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:{{ gridCols }};gap:{{ gridGap }} 32px">
+          <sc-for list="{{ products }}" as="p" hint-placeholder-count="8">
+            <div>
+              <button onClick="{{ p.open }}" style-hover="opacity:0.72" style="display:block;width:100%;text-align:left">
+                <div style="position:relative;border-radius:4px;overflow:hidden">
+                  <div style="position:relative;aspect-ratio:3/4;background:#FFFFFF;border-radius:4px;overflow:hidden;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);opacity:{{ p.op }};filter:{{ p.fx }}">
+                    <div style="position:absolute;inset:0;display:{{ p.plateShow }};align-items:center;justify-content:center;padding:16px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ p.plate }}</div>
+                    <sc-if value="{{ showIndex }}" hint-placeholder-val="{{ true }}">
+                      <div style="position:absolute;top:10px;left:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8C877D">{{ p.idx }}</div>
+                    </sc-if>
+                  </div>
+                  <div style="position:absolute;top:13%;right:-27%;width:100%;transform:rotate(45deg);transform-origin:center;display:{{ p.soldShow }};background:#C42116;color:#FFFFFF;text-align:center;padding:8px 0;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.16em;text-transform:uppercase">Sold out</div>
+                </div>
+                <div style="margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ p.meta }}</div>
+                <div style="margin-top:6px;font-size:14px;color:{{ p.titleColor }}">{{ p.title }}</div>
+                <div style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:{{ p.priceColor }};text-decoration:{{ p.priceLine }}">{{ p.price }}</div>
+                <div style="margin-top:6px;height:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ p.stateColor }}">{{ p.stateLine }}</div>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isProduct }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px">
+      <button onClick="{{ goCatalog }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:28px" style-hover="color:#12100E">← Back to catalog</button>
+      <div style="display:grid;grid-template-columns:{{ pdCols }};gap:48px;align-items:start">
+        <div style="display:flex;flex-direction:{{ thumbDir }};gap:16px">
+          <div style="display:flex;flex-direction:{{ thumbStripDir }};gap:12px;order:{{ thumbOrder }}">
+            <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.pick }}" style-hover="outline-color:#12100E" style="width:{{ thumbW }};aspect-ratio:3/4;border-radius:4px;background:#FFFFFF;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);outline:1px solid {{ t.ring }};outline-offset:-1px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.08em;color:#8C877D">{{ t.label }}</button>
+            </sc-for>
+          </div>
+          <div style="flex:1;aspect-ratio:3/4;background:#FFFFFF;border-radius:4px;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ heroPlate }}</div>
+        </div>
+
+        <div style="position:sticky;top:60px">
+          <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ pdTitleSize }};line-height:1.1;margin:0">{{ pd.title }}</h1>
+          <div style="margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ pd.meta }}</div>
+          <div style="margin-top:28px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:{{ pd.priceColor }};text-decoration:{{ pd.priceLine }}">{{ pd.price }}</div>
+          <div style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ pd.availColor }}">{{ pd.avail }}</div>
+
+          <button onClick="{{ addToCart }}" disabled="{{ pd.disabled }}" style-hover="opacity:0.86" style="margin-top:28px;width:100%;height:52px;background:{{ pd.btnBg }};color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;border-radius:0;cursor:{{ pd.btnCursor }}">{{ pd.btnLabel }}</button>
+          <div style="margin-top:12px;font-size:12px;color:{{ pd.noteColor }};text-align:center">{{ pd.note }}</div>
+
+          <div style="margin-top:36px">
+            <sc-for list="{{ specs }}" as="s" hint-placeholder-count="8">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding:14px 0;border-top:1px solid #E4E1DA">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ s.label }}</span>
+                <span style="font-size:14px;text-align:right">{{ s.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCart }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px">
+      <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 36px">Cart</h1>
+      <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:80px 0;border-top:1px solid #E4E1DA">
+          <div style="font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:10px">Your cart is empty</div>
+          <div style="font-size:14px;color:#8C877D;margin-bottom:26px">Holds last ten minutes from the moment you add a piece.</div>
+          <button onClick="{{ goCatalog }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid #12100E;padding-bottom:3px" style-hover="color:#8C877D;border-bottom-color:#8C877D">Browse the catalog</button>
+        </div>
+      </sc-if>
+      <div style="display:grid;grid-template-columns:{{ cartCols }};gap:56px;align-items:start;display:{{ cartShow }}">
+        <div>
+          <sc-for list="{{ cartLines }}" as="l" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:{{ lineCols }};gap:20px;padding:28px 0;border-top:1px solid #E4E1DA;align-items:start">
+              <div style="width:{{ lineThumbW }};aspect-ratio:3/4;border-radius:4px;background:#FFFFFF;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;text-align:center;color:#8C877D;padding:8px">{{ l.plate }}</div>
+              <div>
+                <div style="font-size:15px">{{ l.title }}</div>
+                <div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ l.meta }}</div>
+                <div style="margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:{{ l.holdColor }}">{{ l.hold }}</div>
+                <div style="display:flex;align-items:center;gap:22px;margin-top:18px">
+                  <div style="display:flex;align-items:center;border:1px solid #E4E1DA;border-radius:2px">
+                    <button onClick="{{ l.dec }}" aria-label="Decrease" style-hover="background:#EFEDE7;color:#12100E" style="width:38px;height:38px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#8C877D">−</button>
+                    <span style="width:34px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:13px">{{ l.qty }}</span>
+                    <button onClick="{{ l.inc }}" aria-label="Increase" style-hover="background:#EFEDE7;color:#12100E" style="width:38px;height:38px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#8C877D">+</button>
+                  </div>
+                  <button onClick="{{ l.remove }}" style-hover="color:#12100E;border-bottom-color:#12100E" style="font-size:13px;color:#8C877D;border-bottom:1px solid #E4E1DA;padding-bottom:2px">Remove</button>
+                  <button onClick="{{ l.renew }}" style-hover="color:#8C877D;border-bottom-color:#8C877D" style="display:{{ l.renewShow }};font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid #12100E;padding-bottom:2px">Renew hold</button>
+                </div>
+              </div>
+              <div style="grid-column:{{ linePriceCol }};font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:{{ linePriceAlign }};margin-top:{{ linePriceTop }}">{{ l.total }}</div>
+            </div>
+          </sc-for>
+          <div style="border-top:1px solid #E4E1DA"></div>
+        </div>
+
+        <div style="position:sticky;top:60px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;padding-bottom:16px">Summary</div>
+          <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:13px"><span style="color:#8C877D">Subtotal</span><span>{{ subtotal }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:13px"><span style="color:#8C877D">Delivery</span><span style="color:#8C877D">At checkout</span></div>
+          <div style="display:flex;justify-content:space-between;padding:16px 0;border-top:1px solid #E4E1DA;border-bottom:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:16px"><span>Total</span><span>{{ subtotal }}</span></div>
+          <button onClick="{{ goCheckout }}" disabled="{{ checkoutBlocked }}" style-hover="opacity:0.86" style="margin-top:24px;width:100%;height:52px;background:{{ checkoutBg }};color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;cursor:{{ checkoutCursor }}">Checkout</button>
+          <div style="margin-top:12px;font-size:12px;color:{{ signal }};display:{{ expiredShow }}">A hold has expired. Renew it before checking out.</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCheckout }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px">
+      <button onClick="{{ goCart }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:24px" style-hover="color:#12100E">← Return to cart</button>
+      <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 44px">Checkout</h1>
+      <div style="display:grid;grid-template-columns:{{ coCols }};gap:64px;align-items:start">
+        <div>
+          <div style="margin-bottom:30px">
+            <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">Full name</label>
+            <input value="{{ form.name }}" onChange="{{ onName }}" placeholder="Enter your full name" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-size:15px" />
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ signal }};margin-top:8px;display:{{ err.name }}">Required</div>
+          </div>
+          <div style="margin-bottom:30px">
+            <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">Phone number</label>
+            <input value="{{ form.phone }}" onChange="{{ onPhone }}" placeholder="+233" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-family:'IBM Plex Mono',monospace;font-size:15px" />
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ signal }};margin-top:8px;display:{{ err.phone }}">Required</div>
+          </div>
+          <div style="margin-bottom:30px">
+            <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">Delivery address</label>
+            <textarea value="{{ form.address }}" onChange="{{ onAddress }}" rows="2" placeholder="Street address, building, floor" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-size:15px;resize:none"></textarea>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ signal }};margin-top:8px;display:{{ err.address }}">Required</div>
+          </div>
+          <div style="margin-bottom:44px">
+            <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">Delivery zone</label>
+            <select value="{{ form.zone }}" onChange="{{ onZone }}" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-size:15px;border-radius:0">
+              <option value="">Select a zone</option>
+              <sc-for list="{{ zones }}" as="z" hint-placeholder-count="5">
+                <option value="{{ z.name }}">{{ z.label }}</option>
+              </sc-for>
+            </select>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:{{ signal }};margin-top:8px;display:{{ err.zone }}">Select a delivery zone</div>
+          </div>
+
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:6px">Payment method</div>
+          <sc-for list="{{ payments }}" as="pm" hint-placeholder-count="2">
+            <button onClick="{{ pm.pick }}" style-hover="background:#F2EFE9" style="display:block;width:100%;text-align:left;padding:22px 20px;border-top:1px solid #E4E1DA;border-left:2px solid {{ pm.rule }};font-size:15px;color:{{ pm.color }}">{{ pm.label }}</button>
+          </sc-for>
+          <div style="border-top:1px solid #E4E1DA"></div>
+        </div>
+
+        <div style="position:sticky;top:60px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;padding-bottom:18px">Order summary</div>
+          <sc-for list="{{ cartLines }}" as="l" hint-placeholder-count="3">
+            <div style="display:flex;gap:16px;padding:16px 0;border-top:1px solid #E4E1DA;align-items:center">
+              <div style="width:52px;aspect-ratio:3/4;border-radius:4px;background:#FFFFFF;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);flex-shrink:0"></div>
+              <div style="flex:1">
+                <div style="font-size:14px">{{ l.title }}</div>
+                <div style="margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ l.short }}</div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:13px">{{ l.total }}</div>
+            </div>
+          </sc-for>
+          <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:13px"><span style="color:#8C877D">Subtotal</span><span>{{ subtotal }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:13px"><span style="color:#8C877D">Delivery fee</span><span>{{ deliveryText }}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:16px 0;border-top:1px solid #E4E1DA;border-bottom:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:16px"><span>Total</span><span>{{ total }}</span></div>
+          <button onClick="{{ placeOrder }}" style-hover="background:#332E29" style="margin-top:24px;width:100%;height:52px;background:#12100E;color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase">{{ payLabel }}</button>
+          <div style="margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8C877D;text-align:center">{{ payNote }}</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isConfirm }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px;max-width:640px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">Order confirmed</div>
+      <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:14px 0 0">Thank you</h1>
+      <div style="margin-top:16px;font-size:15px;color:#8C877D;max-width:46ch">We have your order and the pieces are held for you. Delivery is arranged by phone within a working day.</div>
+      <div style="margin-top:44px">
+        <sc-for list="{{ confirmRows }}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;justify-content:space-between;gap:24px;padding:15px 0;border-top:1px solid #E4E1DA">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ r.label }}</span>
+            <span style="font-family:{{ r.font }};font-size:14px;text-align:right">{{ r.value }}</span>
+          </div>
+        </sc-for>
+        <div style="border-top:1px solid #E4E1DA"></div>
+      </div>
+      <div style="display:flex;gap:26px;margin-top:40px;align-items:center;flex-wrap:wrap">
+        <button onClick="{{ goOrders }}" style-hover="background:#332E29" style="height:50px;padding:0 28px;background:#12100E;color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase">View my orders</button>
+        <button onClick="{{ goCatalog }}" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid #12100E;padding-bottom:3px" style-hover="color:#8C877D;border-bottom-color:#8C877D">Keep browsing</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px;max-width:420px;margin:0 auto">
+      <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 8px">{{ authTitle }}</h1>
+      <div style="font-size:14px;color:#8C877D;margin-bottom:40px">{{ authSub }}</div>
+      <sc-for list="{{ authFields }}" as="f" hint-placeholder-count="4">
+        <div style="margin-bottom:28px">
+          <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">{{ f.label }}</label>
+          <input value="{{ f.value }}" onChange="{{ f.onInput }}" type="{{ f.type }}" placeholder="{{ f.placeholder }}" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-size:15px" />
+          <div style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:{{ f.noteColor }};display:{{ f.noteShow }}">{{ f.note }}</div>
+        </div>
+      </sc-for>
+      <button onClick="{{ doAuth }}" style-hover="opacity:0.86" style="margin-top:14px;width:100%;height:52px;background:{{ authBtnBg }};cursor:{{ authBtnCursor }};color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase">{{ authCta }}</button>
+      <button onClick="{{ toggleAuth }}" style-hover="color:#12100E" style="margin-top:24px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ authSwitch }}</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAccount }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px;max-width:{{ accountMaxW }}">
+      <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 24px">Account</h1>
+      <sc-if value="{{ signedOut }}" hint-placeholder-val="{{ false }}">
+        <div style="padding-top:32px">
+          <div style="font-size:15px;color:#8C877D;margin-bottom:26px">You are signed out.</div>
+          <button onClick="{{ goSignIn }}" style-hover="opacity:0.86" style="height:50px;padding:0 28px;background:#12100E;color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase">Sign in</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ signedIn }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display:flex;gap:28px;border-bottom:1px solid #E4E1DA;margin-bottom:36px">
+            <sc-for list="{{ accountTabs }}" as="t" hint-placeholder-count="2">
+              <button onClick="{{ t.pick }}" style-hover="color:#12100E" style="padding:0 0 14px;margin-bottom:-1px;border-bottom:2px solid {{ t.rule }};font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ t.color }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ isAccountOrders }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <sc-for list="{{ myOrders }}" as="o" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:{{ ordCols }};gap:20px;padding:24px 0;border-top:1px solid #E4E1DA;align-items:baseline">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px">{{ o.no }}</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ o.placed }}</div>
+                  <div style="font-size:14px">{{ o.items }}</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:{{ ordAlign }}">{{ o.total }}</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ o.statusColor }};text-align:{{ ordAlign }}">{{ o.status }}</div>
+                </div>
+              </sc-for>
+              <div style="border-top:1px solid #E4E1DA"></div>
+            </div>
+          </sc-if>
+
+          <div style="display:{{ detailsShow }}">
+          <div style="font-size:14px;color:#8C877D;margin-bottom:40px">Edit these and your checkout fills in from them.</div>
+          <sc-for list="{{ accountFields }}" as="f" hint-placeholder-count="4">
+            <div style="margin-bottom:28px">
+              <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">{{ f.label }}</label>
+              <input value="{{ f.value }}" onChange="{{ f.onInput }}" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-family:{{ f.font }};font-size:15px" />
+            </div>
+          </sc-for>
+          </div>
+          <div style="margin-top:56px;padding-top:28px;border-top:1px solid #E4E1DA">
+            <button onClick="{{ signOut }}" style-hover="background:#12100E;color:#FFFFFF" style="height:48px;padding:0 26px;border:1px solid #12100E;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase">Sign out</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isStates }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:{{ gridPadY }} {{ padX }} 120px">
+      <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 10px">List states</h1>
+      <div style="font-size:14px;color:#8C877D;margin-bottom:40px;max-width:52ch">Every list in the app defines a loading, empty and error state. These are the three, at catalog scale.</div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;padding:16px 0;border-top:1px solid #E4E1DA">Loading</div>
+      <div style="display:grid;grid-template-columns:{{ gridCols }};gap:{{ gridGap }} 32px;margin-bottom:64px">
+        <sc-for list="{{ skeletons }}" as="s" hint-placeholder-count="4">
+          <div>
+            <div style="aspect-ratio:3/4;border-radius:4px;background:#EFEDE7;animation:pulse 1.6s ease-in-out infinite"></div>
+            <div style="margin-top:14px;height:9px;width:60%;background:#EFEDE7;animation:pulse 1.6s ease-in-out infinite"></div>
+            <div style="margin-top:10px;height:9px;width:80%;background:#EFEDE7;animation:pulse 1.6s ease-in-out infinite"></div>
+            <div style="margin-top:10px;height:9px;width:34%;background:#EFEDE7;animation:pulse 1.6s ease-in-out infinite"></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;padding:16px 0;border-top:1px solid #E4E1DA">Empty</div>
+      <div style="padding:72px 0;text-align:center;margin-bottom:64px">
+        <div style="font-family:'Instrument Serif',serif;font-size:28px;margin-bottom:10px">Nothing matches</div>
+        <div style="font-size:14px;color:#8C877D;margin-bottom:26px">No pieces fit that combination of filters right now.</div>
+        <button onClick="{{ goCatalog }}" style-hover="color:#8C877D;border-bottom-color:#8C877D" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid #12100E;padding-bottom:3px">Clear filters</button>
+      </div>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;padding:16px 0;border-top:1px solid #E4E1DA">Error</div>
+      <div style="padding:72px 0;text-align:center;border-bottom:1px solid #E4E1DA">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ signal }};margin-bottom:14px">Request failed · 503</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:28px;margin-bottom:10px">The catalog did not load</div>
+        <div style="font-size:14px;color:#8C877D;margin-bottom:26px">The shop is reachable but the listing request timed out.</div>
+        <button style-hover="background:#332E29" style="height:48px;padding:0 26px;background:#12100E;color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase">Try again</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:{{ admCols }};min-height:calc(100vh - 44px)">
+      <div style="border-right:1px solid #E4E1DA;padding:{{ admSidePad }}">
+        <div style="font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:34px">Archive 233</div>
+        <div style="display:flex;flex-direction:{{ admNavDir }};gap:4px">
+          <sc-for list="{{ adminNav }}" as="a" hint-placeholder-count="3">
+            <button onClick="{{ a.go }}" style-hover="color:#12100E" style="text-align:left;padding:11px 0 11px 14px;border-left:2px solid {{ a.rule }};font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ a.color }}">{{ a.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="padding:{{ admPad }};min-width:0">
+        <sc-if value="{{ isAdminDash }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 32px">Overview</h1>
+            <div style="display:grid;grid-template-columns:{{ metricCols }};border-top:1px solid #E4E1DA;border-bottom:1px solid #E4E1DA">
+              <sc-for list="{{ metrics }}" as="k" hint-placeholder-count="4">
+                <div style="padding:26px 0 26px {{ metricPad }};border-left:1px solid {{ k.rule }}">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ k.label }}</div>
+                  <div style="margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:{{ metricSize }};letter-spacing:-0.01em;white-space:nowrap">{{ k.value }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h2Size }};margin:56px 0 24px">Awaiting action</h2>
+            <div style="overflow-x:auto">
+              <div style="min-width:{{ tableMinW }}">
+                <div style="display:grid;grid-template-columns:{{ tblCols }};gap:16px;padding:0 0 14px;border-bottom:1px solid #E4E1DA">
+                  <sc-for list="{{ tableHead }}" as="h" hint-placeholder-count="8">
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;text-align:{{ h.align }}">{{ h.label }}</div>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ adminOrders }}" as="o" hint-placeholder-count="5">
+                  <button onClick="{{ o.open }}" style-hover="background:#F2EFE9" style="display:grid;width:100%;grid-template-columns:{{ tblCols }};gap:16px;padding:18px 0;border-bottom:1px solid #E4E1DA;align-items:center;text-align:left">
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px">{{ o.no }}</div>
+                    <div style="font-size:14px">{{ o.customer }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#8C877D">{{ o.phone }}</div>
+                    <div style="font-size:14px">{{ o.zone }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#8C877D">{{ o.items }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right">{{ o.total }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ o.payColor }};text-align:right">{{ o.payment }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ o.statusColor }};text-align:right">{{ o.status }}</div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAdminNew }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:{{ h1Size }};margin:0 0 40px">New product</h1>
+            <div style="display:grid;grid-template-columns:{{ newCols }};gap:56px;align-items:start">
+              <div>
+                <div style="border:1px dashed #E4E1DA;border-radius:4px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+                  <div style="font-size:15px">Drop photos</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">Max 6</div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+                  <sc-for list="{{ newThumbs }}" as="t" hint-placeholder-count="3">
+                    <div style="position:relative;aspect-ratio:3/4;border-radius:4px;background:#FFFFFF;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);border:1px solid #E4E1DA">
+                      <div style="position:absolute;top:0;left:0;background:{{ t.badgeBg }};color:{{ t.badgeColor }};font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 6px">{{ t.n }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">Drag to reorder · 1 is primary</div>
+              </div>
+
+              <div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:30px 32px">
+                  <sc-for list="{{ newFields }}" as="f" hint-placeholder-count="11">
+                    <div style="grid-column:{{ f.span }}">
+                      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-bottom:10px">{{ f.label }}</label>
+                      <input placeholder="{{ f.placeholder }}" style="width:100%;border:0;border-bottom:1px solid #E4E1DA;background:transparent;padding:10px 0;font-family:{{ f.font }};font-size:15px" />
+                      <div style="margin-top:8px;font-size:12px;color:#8C877D;display:{{ f.helpShow }}">{{ f.help }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:center;gap:24px;margin-top:48px;padding-top:28px;border-top:1px solid #E4E1DA;flex-wrap:wrap">
+                  <button style-hover="color:#12100E" style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;height:48px">Save draft</button>
+                  <button style-hover="background:#12100E;color:#FFFFFF" style="height:48px;padding:0 26px;border:1px solid #12100E;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase">Publish and add another</button>
+                  <button style-hover="background:#332E29" style="height:48px;padding:0 30px;background:#12100E;color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase">Publish</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAdminOrder }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="display:flex;align-items:center;gap:18px;padding-bottom:22px;border-bottom:1px solid #E4E1DA">
+              <button onClick="{{ goAdminDash }}" style-hover="color:#12100E" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8C877D">←</button>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:28px">{{ ao.no }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ ao.status }}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:{{ aoCols }};gap:56px;align-items:start;margin-top:40px">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;padding-bottom:14px">Delivery</div>
+                <sc-for list="{{ ao.delivery }}" as="d" hint-placeholder-count="5">
+                  <div style="display:flex;justify-content:space-between;gap:24px;padding:15px 0;border-top:1px solid #E4E1DA">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ d.label }}</span>
+                    <span style="font-family:{{ d.font }};font-size:14px;text-align:right">{{ d.value }}</span>
+                  </div>
+                </sc-for>
+                <div style="border-top:1px solid #E4E1DA"></div>
+
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:48px;padding-bottom:14px">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">Items</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ ao.itemCount }}</span>
+                </div>
+                <sc-for list="{{ ao.items }}" as="i" hint-placeholder-count="2">
+                  <div style="display:flex;gap:20px;padding:20px 0;border-top:1px solid #E4E1DA;align-items:center">
+                    <div style="width:64px;aspect-ratio:3/4;border-radius:4px;background:#FFFFFF;background-image:repeating-linear-gradient(135deg,#F4F2ED 0 7px,#FFFFFF 7px 14px);flex-shrink:0"></div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:15px">{{ i.title }}</div>
+                      <div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D">{{ i.meta }}</div>
+                    </div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#8C877D">{{ i.qty }}</div>
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;width:120px;text-align:right">{{ i.price }}</div>
+                  </div>
+                </sc-for>
+                <div style="border-top:1px solid #E4E1DA"></div>
+              </div>
+
+              <div>
+                <sc-for list="{{ ao.totals }}" as="t" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:{{ t.size }}"><span style="color:{{ t.labelColor }}">{{ t.label }}</span><span>{{ t.value }}</span></div>
+                </sc-for>
+                <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #E4E1DA;border-bottom:1px solid #E4E1DA;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase"><span style="color:#8C877D">Payment</span><span>{{ ao.payment }}</span></div>
+
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8C877D;margin-top:44px;margin-bottom:14px">Status</div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px 12px">
+                  <sc-for list="{{ ao.steps }}" as="s" hint-placeholder-count="5">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ s.color }};border-bottom:1px solid {{ s.rule }};padding-bottom:2px">{{ s.label }}</span>
+                  </sc-for>
+                </div>
+                <button onClick="{{ advanceStatus }}" style-hover="background:#332E29" style="margin-top:36px;width:100%;height:52px;background:#12100E;color:#FFFFFF;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase">{{ ao.cta }}</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showBottomNav }}" hint-placeholder-val="{{ false }}">
+    <div style="position:sticky;bottom:0;background:#FAF9F6;border-top:1px solid #E4E1DA;display:grid;grid-template-columns:repeat(3,1fr)">
+      <button onClick="{{ goCatalog }}" style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ tabShop }}">
+        <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="{{ tabShop }}" stroke-width="1.2"><rect x="2" y="2" width="6" height="6"></rect><rect x="10" y="2" width="6" height="6"></rect><rect x="2" y="10" width="6" height="6"></rect><rect x="10" y="10" width="6" height="6"></rect></svg>
+        <span>Shop</span>
+      </button>
+      <button onClick="{{ goCart }}" style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ tabCart }}">
+        <svg width="16" height="17" viewBox="0 0 16 18" fill="none" stroke="{{ tabCart }}" stroke-width="1.2"><rect x="1" y="5" width="14" height="12"></rect><path d="M5 5V3.5A3 3 0 0 1 11 3.5V5"></path></svg>
+        <span>Cart</span>
+      </button>
+      <button onClick="{{ goLogin }}" style="height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ tabAccount }}">
+        <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="{{ tabAccount }}" stroke-width="1.2"><circle cx="9" cy="6" r="3.2"></circle><path d="M2.5 16c0-3.2 2.9-5.2 6.5-5.2s6.5 2 6.5 5.2"></path></svg>
+        <span>Account</span>
+      </button>
+    </div>
+  </sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;holdMinutes&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:1,&quot;max&quot;:30,&quot;unit&quot;:&quot;min&quot;,&quot;section&quot;:&quot;Reservation&quot;},&quot;signalColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#B23A20&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#B23A20&quot;,&quot;#8C3A1E&quot;,&quot;#12100E&quot;,&quot;#6B7B5E&quot;],&quot;section&quot;:&quot;Reservation&quot;},&quot;showIndexNumbers&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Catalog&quot;}}">
+class Component extends DCLogic {
+  ZONES = [
+    { name: 'Accra Central', fee: 20 },
+    { name: 'East Legon', fee: 30 },
+    { name: 'Tema', fee: 40 },
+    { name: 'Madina', fee: 30 },
+    { name: 'Kumasi', fee: 60 }
+  ];
+
+  PRODUCTS = [
+    { id: '001', title: 'Vintage Detroit Jacket', brand: "Carhartt", size: 'XL', cond: 'Excellent', price: 450, cat: 'Jackets', qty: 2, state: 'available', colour: 'Hamilton Brown', era: '1990s', fit: 'Relaxed boxy fit', flaws: 'Faded collar patina', plate: 'Detroit jacket · front' },
+    { id: '002', title: '501 Vintage Wash', brand: "Levi's", size: '32X32', cond: 'Vintage', price: 320, cat: 'Denim', qty: 1, state: 'reserved', colour: 'Light indigo', era: '1990s', fit: 'Straight leg', flaws: 'Hem fray, both cuffs', plate: '501 · flat lay' },
+    { id: '003', title: '874 Work Pants', brand: 'Dickies', size: '34X30', cond: 'Good', price: 220, cat: 'Pants', qty: 0, state: 'sold', colour: 'Silver grey', era: '2000s', fit: 'Original fit', flaws: 'Light wear at seat', plate: '874 · flat lay' },
+    { id: '004', title: "Air Max 97 'Silver Bullet'", brand: 'Nike', size: 'US 10', cond: 'Deadstock', price: 650, cat: 'Footwear', qty: 1, state: 'available', colour: 'Metallic silver', era: '2017 retro', fit: 'True to size', flaws: 'None, boxed', plate: 'Air Max 97 · lateral' },
+    { id: '005', title: 'Wool Overshirt', brand: 'Pendleton', size: 'L', cond: 'Excellent', price: 380, cat: 'Shirts', qty: 1, state: 'available', colour: 'Charcoal plaid', era: '1980s', fit: 'Boxy, wears large', flaws: 'None', plate: 'Overshirt · front' },
+    { id: '006', title: 'Chore Coat', brand: 'Dickies', size: 'M', cond: 'Good', price: 180, cat: 'Jackets', qty: 3, state: 'available', colour: 'Washed navy', era: '2000s', fit: 'Regular', flaws: 'Paint fleck, left cuff', plate: 'Chore coat · front' },
+    { id: '007', title: '505 Regular Fit', brand: "Levi's", size: '34X32', cond: 'Good', price: 240, cat: 'Denim', qty: 1, state: 'available', colour: 'Mid indigo', era: '1990s', fit: 'Straight leg', flaws: 'Fading at knee', plate: '505 · flat lay' },
+    { id: '008', title: 'Duck Canvas Bib', brand: 'Carhartt', size: '36X32', cond: 'Vintage', price: 420, cat: 'Pants', qty: 1, state: 'reserved', colour: 'Brown duck', era: '1990s', fit: 'Roomy', flaws: 'Repaired knee panel', plate: 'Bib overall · front' },
+    { id: '009', title: 'Air Force 1 Low', brand: 'Nike', size: 'US 9', cond: 'Good', price: 300, cat: 'Footwear', qty: 0, state: 'sold', colour: 'Triple white', era: '2019', fit: 'True to size', flaws: 'Sole yellowing', plate: 'AF1 · lateral' },
+    { id: '010', title: 'Flannel Overshirt', brand: 'Woolrich', size: 'XL', cond: 'Excellent', price: 280, cat: 'Shirts', qty: 2, state: 'available', colour: 'Rust check', era: '1990s', fit: 'Regular', flaws: 'None', plate: 'Flannel · front' },
+    { id: '011', title: 'Double Knee Pant', brand: 'Carhartt', size: '32X30', cond: 'Good', price: 340, cat: 'Pants', qty: 1, state: 'available', colour: 'Faded black', era: '2000s', fit: 'Loose', flaws: 'Wear at both knees', plate: 'Double knee · flat lay' },
+    { id: '012', title: 'Harrington Jacket', brand: 'Baracuta', size: 'M', cond: 'Excellent', price: 580, cat: 'Jackets', qty: 1, state: 'available', colour: 'Stone', era: '1990s', fit: 'Trim', flaws: 'None', plate: 'Harrington · front' }
+  ];
+
+  FILTERS = [
+    { key: 'Category', options: ['All', 'Jackets', 'Denim', 'Pants', 'Shirts', 'Footwear'] },
+    { key: 'Size', options: ['All', 'M', 'L', 'XL', '32X32', '34X30', '34X32', '36X32', 'US 9', 'US 10'] },
+    { key: 'Brand', options: ['All', 'Carhartt', "Levi's", 'Dickies', 'Nike', 'Pendleton', 'Woolrich', 'Baracuta'] },
+    { key: 'Condition', options: ['All', 'Excellent', 'Good', 'Vintage', 'Deadstock'] },
+    { key: 'Price', options: ['All', 'Under 300', '300 to 500', 'Over 500'] }
+  ];
+
+  SORTS = ['Newest', 'Price ascending', 'Price descending'];
+
+  state = {
+    screen: 'catalog',
+    mobile: false,
+    pid: '001',
+    thumb: 0,
+    cart: [{ id: '005', qty: 1, secs: 587 }, { id: '012', qty: 1, secs: 43 }, { id: '004', qty: 1, secs: 260 }],
+    resv: { '002': 432, '008': 711 },
+    filters: { Category: 'All', Size: 'All', Brand: 'All', Condition: 'All', Price: 'All' },
+    sort: 'Newest',
+    openFilter: null,
+    sortOpen: false,
+    user: { name: 'Kofi Mensah', email: 'kofi@example.com', phone: '054 123 4567', address: '12 Osu Badu St, Accra', zone: 'Accra Central' },
+    form: { name: 'Kofi Mensah', phone: '054 123 4567', address: '12 Osu Badu St, Accra', zone: 'Accra Central', pay: 'paystack' },
+    errors: {},
+    auth: { mode: 'signin', name: '', email: '', phone: '', pass: '' },
+    order: null,
+    myOrders: [
+      { no: 'TH-1041', placed: '02 Aug 2026', items: '2 items · Carhartt, Nike', total: 1100, status: 'Delivered' },
+      { no: 'TH-1039', placed: '21 Jul 2026', items: '1 item · Dickies', total: 260, status: 'Delivered' }
+    ],
+    adminScreen: 'dashboard',
+    adminStatus: 2,
+    seq: 1044
+  };
+
+  componentDidMount() {
+    this.timer = setInterval(() => this.tick(), 1000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+
+  tick() {
+    this.setState(s => {
+      const resv = {};
+      Object.keys(s.resv).forEach(k => { resv[k] = Math.max(0, s.resv[k] - 1); });
+      return { cart: s.cart.map(l => ({ ...l, secs: Math.max(0, l.secs - 1) })), resv };
+    });
+  }
+
+  money(n) {
+    return 'GH₵ ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  clock(s) {
+    const v = Math.max(0, Math.floor(s));
+    const m = Math.floor(v / 60);
+    const r = v % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
+  }
+
+  go(screen) {
+    return () => this.setState({ screen, openFilter: null, sortOpen: false });
+  }
+
+  find(id) {
+    return this.PRODUCTS.find(p => p.id === id);
+  }
+
+  liveState(p) {
+    if (p.state === 'sold') return 'sold';
+    if (p.state === 'reserved' && (this.state.resv[p.id] || 0) > 0) return 'reserved';
+    return 'available';
+  }
+
+  matches(p) {
+    const f = this.state.filters;
+    const q = (this.state.query || '').trim().toLowerCase();
+    if (q && (p.title + ' ' + p.brand).toLowerCase().indexOf(q) < 0) return false;
+    if (f.Category !== 'All' && p.cat !== f.Category) return false;
+    if (f.Size !== 'All' && p.size !== f.Size) return false;
+    if (f.Brand !== 'All' && p.brand !== f.Brand) return false;
+    if (f.Condition !== 'All' && p.cond !== f.Condition) return false;
+    if (f.Price === 'Under 300' && p.price >= 300) return false;
+    if (f.Price === '300 to 500' && (p.price < 300 || p.price > 500)) return false;
+    if (f.Price === 'Over 500' && p.price <= 500) return false;
+    return true;
+  }
+
+  cartTotals() {
+    const sub = this.state.cart.reduce((a, l) => a + (this.find(l.id) ? this.find(l.id).price * l.qty : 0), 0);
+    const zone = this.ZONES.find(z => z.name === this.state.form.zone);
+    return { sub, fee: zone ? zone.fee : 0, zone };
+  }
+
+  addToCart() {
+    const s = this.state;
+    const p = this.find(s.pid);
+    if (!p || this.liveState(p) !== 'available') return;
+    const hold = (this.props.holdMinutes ?? 10) * 60;
+    const line = s.cart.find(l => l.id === p.id);
+    if (line) {
+      this.setState({ cart: s.cart.map(l => l.id === p.id ? { ...l, qty: Math.min(l.qty + 1, Math.min(p.qty, 5)), secs: hold } : l) });
+    } else {
+      if (s.cart.length >= 10) return;
+      this.setState({ cart: s.cart.concat([{ id: p.id, qty: 1, secs: hold }]) });
+    }
+  }
+
+  placeOrder() {
+    const s = this.state;
+    const errors = {};
+    if (!s.form.name.trim()) errors.name = true;
+    if (!s.form.phone.trim()) errors.phone = true;
+    if (!s.form.address.trim()) errors.address = true;
+    if (!s.form.zone) errors.zone = true;
+    if (Object.keys(errors).length) { this.setState({ errors }); return; }
+    const t = this.cartTotals();
+    const no = 'TH-' + s.seq;
+    const order = {
+      no,
+      placed: '15 Aug 2026',
+      items: s.cart.length + (s.cart.length === 1 ? ' item' : ' items'),
+      total: t.sub + t.fee,
+      sub: t.sub,
+      fee: t.fee,
+      zone: s.form.zone,
+      name: s.form.name,
+      phone: s.form.phone,
+      address: s.form.address,
+      pay: s.form.pay === 'paystack' ? 'Mobile Money / Card' : 'Cash on delivery',
+      status: 'Pending'
+    };
+    this.setState({ order, cart: [], errors: {}, seq: s.seq + 1, screen: 'confirm', myOrders: [order].concat(s.myOrders) });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const m = s.mobile;
+    const sig = this.props.signalColor ?? '#B23A20';
+    const ink = '#12100E';
+    const grey = '#8C877D';
+    const rule = '#E4E1DA';
+    const t = this.cartTotals();
+    const store = ['catalog', 'product', 'cart', 'checkout', 'confirm', 'orders', 'login', 'account', 'states'].indexOf(s.screen) >= 0;
+
+    const navItems = [
+      ['catalog', 'Catalog'], ['product', 'Product'], ['cart', 'Cart'], ['checkout', 'Checkout'],
+      ['confirm', 'Confirmed'], ['orders', 'My orders'], ['login', 'Sign in'], ['account', 'Account'], ['states', 'States'],
+      ['admin', 'Admin'], ['adminNew', 'New product'], ['adminOrder', 'Order detail']
+    ];
+    const screenOf = k => (k === 'admin' || k === 'adminNew' || k === 'adminOrder') ? 'admin' : (k === 'orders' ? 'account' : k);
+    const adminKey = { admin: 'dashboard', adminNew: 'new', adminOrder: 'order' };
+    const activeNav = s.screen === 'admin'
+      ? ({ dashboard: 'admin', new: 'adminNew', order: 'adminOrder' })[s.adminScreen]
+      : s.screen === 'account' ? (s.accountTab === 'orders' ? 'orders' : 'account') : s.screen;
+
+    const nav = navItems.map(([k, label]) => ({
+      label,
+      color: activeNav === k ? '#FAF9F6' : grey,
+      go: () => this.setState({
+        screen: screenOf(k),
+        adminScreen: adminKey[k] || s.adminScreen,
+        accountTab: k === 'orders' ? 'orders' : k === 'account' ? 'details' : s.accountTab,
+        openFilter: null, sortOpen: false
+      })
+    }));
+
+    const visible = this.PRODUCTS.filter(p => this.matches(p));
+    if (s.sort === 'Price ascending') visible.sort((a, b) => a.price - b.price);
+    if (s.sort === 'Price descending') visible.sort((a, b) => b.price - a.price);
+
+    const products = visible.map(p => {
+      const st = this.liveState(p);
+      let line = '';
+      let lineColor = grey;
+      if (st === 'available') line = p.qty === 1 ? '1 left' : p.qty + ' available';
+      if (st === 'reserved') { line = 'Reserved · ' + this.clock(s.resv[p.id] || 0); lineColor = (s.resv[p.id] || 0) < 60 ? sig : grey; }
+      if (st === 'sold') line = '';
+      return {
+        idx: p.id,
+        title: p.title,
+        meta: p.brand + ' · ' + p.size + ' · ' + p.cond,
+        price: this.money(p.price),
+        plate: p.plate,
+        op: st === 'available' ? '1' : st === 'reserved' ? '0.55' : '0.55',
+        fx: st === 'sold' ? 'grayscale(1)' : 'none',
+        titleColor: st === 'available' ? ink : grey,
+        priceColor: st === 'available' ? ink : grey,
+        priceLine: st === 'sold' ? 'line-through' : 'none',
+        stateLine: line,
+        stateColor: lineColor,
+        soldShow: st === 'sold' ? 'block' : 'none',
+        plateShow: 'flex',
+        open: () => this.setState({ screen: 'product', pid: p.id, thumb: 0 })
+      };
+    });
+
+    const filterDefs = this.FILTERS.map(f => ({
+      text: s.filters[f.key] === 'All' ? f.key : f.key + ': ' + s.filters[f.key],
+      color: s.filters[f.key] === 'All' ? ink : ink,
+      open: s.openFilter === f.key,
+      toggle: () => this.setState({ openFilter: s.openFilter === f.key ? null : f.key, sortOpen: false }),
+      options: f.options.map(o => ({
+        label: o,
+        color: ink,
+        pick: () => this.setState({ filters: { ...s.filters, [f.key]: o }, openFilter: null })
+      }))
+    }));
+
+    const pd = this.find(s.pid) || this.PRODUCTS[0];
+    const pdState = this.liveState(pd);
+    const inCart = s.cart.find(l => l.id === pd.id);
+    const pdView = {
+      title: pd.title,
+      meta: pd.brand + ' · ' + pd.size + ' · ' + pd.cond,
+      price: this.money(pd.price),
+      priceColor: pdState === 'sold' ? grey : ink,
+      priceLine: pdState === 'sold' ? 'line-through' : 'none',
+      avail: pdState === 'available' ? pd.qty + ' available' : pdState === 'reserved' ? 'Reserved · ' + this.clock(s.resv[pd.id] || 0) : 'Sold out',
+      availColor: pdState === 'available' ? ink : sig,
+      disabled: pdState !== 'available',
+      btnBg: pdState === 'available' ? ink : '#C9C5BC',
+      btnCursor: pdState === 'available' ? 'pointer' : 'not-allowed',
+      btnLabel: pdState === 'available' ? (inCart ? 'In cart · add another' : 'Add to cart') : pdState === 'reserved' ? 'Held by another buyer' : 'Sold out',
+      note: inCart ? 'Held for you · ' + this.clock(inCart.secs) : 'Adding to cart reserves this item for ' + (this.props.holdMinutes ?? 10) + ' minutes.',
+      noteColor: inCart ? ink : grey
+    };
+
+    const specs = [
+      ['Brand', pd.brand], ['Category', pd.cat], ['Size', pd.size], ['Condition', pd.cond],
+      ['Colour', pd.colour], ['Era', pd.era], ['Fit notes', pd.fit], ['Flaws', pd.flaws]
+    ].map(([label, value]) => ({ label, value }));
+
+    const thumbs = ['Front', 'Back', 'Detail'].map((label, i) => ({
+      label: label.toUpperCase(),
+      ring: s.thumb === i ? ink : rule,
+      pick: () => this.setState({ thumb: i })
+    }));
+
+    const cartLines = s.cart.map(l => {
+      const p = this.find(l.id);
+      const expired = l.secs <= 0;
+      return {
+        title: p.title,
+        meta: p.brand + ' · ' + p.size + ' · ' + p.cond,
+        short: p.brand + ' · ' + p.size,
+        plate: p.plate,
+        qty: l.qty,
+        total: this.money(p.price * l.qty),
+        hold: expired ? 'Hold expired' : 'Reserved for you · ' + this.clock(l.secs),
+        holdColor: expired || l.secs < 60 ? sig : ink,
+        renewShow: expired ? 'inline' : 'none',
+        renew: () => this.setState({ cart: s.cart.map(x => x.id === l.id ? { ...x, secs: (this.props.holdMinutes ?? 10) * 60 } : x) }),
+        inc: () => this.setState({ cart: s.cart.map(x => x.id === l.id ? { ...x, qty: Math.min(x.qty + 1, Math.min(p.qty, 5)) } : x) }),
+        dec: () => this.setState({ cart: s.cart.map(x => x.id === l.id ? { ...x, qty: Math.max(1, x.qty - 1) } : x) }),
+        remove: () => this.setState({ cart: s.cart.filter(x => x.id !== l.id) })
+      };
+    });
+
+    const anyExpired = s.cart.some(l => l.secs <= 0);
+    const payments = [
+      { key: 'paystack', label: 'Mobile Money / Card — via Paystack' },
+      { key: 'cod', label: 'Cash on delivery' }
+    ].map(p => ({
+      label: p.label,
+      rule: s.form.pay === p.key ? ink : 'transparent',
+      color: s.form.pay === p.key ? ink : grey,
+      pick: () => this.setState({ form: { ...s.form, pay: p.key } })
+    }));
+
+    const o = s.order || {
+      no: 'TH-1041', placed: '02 Aug 2026', items: '2 items', total: 1100,
+      name: 'Kofi Mensah', phone: '054 123 4567', address: '12 Osu Badu St, Accra',
+      zone: 'Accra Central', pay: 'Mobile Money / Card', status: 'Delivered'
+    };
+    const confirmRows = [
+      { label: 'Order number', value: o.no, font: "'IBM Plex Mono',monospace" },
+      { label: 'Delivering to', value: o.name, font: 'Archivo,sans-serif' },
+      { label: 'Phone', value: o.phone, font: "'IBM Plex Mono',monospace" },
+      { label: 'Address', value: o.address + ' · ' + o.zone, font: 'Archivo,sans-serif' },
+      { label: 'Payment', value: o.pay, font: 'Archivo,sans-serif' },
+      { label: 'Total paid', value: this.money(o.total), font: "'IBM Plex Mono',monospace" }
+    ];
+
+    const myOrders = s.myOrders.map(x => ({
+      no: x.no,
+      placed: x.placed,
+      items: x.items,
+      total: this.money(x.total),
+      status: x.status,
+      statusColor: x.status === 'Pending' ? sig : ink
+    }));
+
+    const isRegister = s.auth.mode === 'register';
+    const authRows = isRegister
+      ? [['Full name', 'name', 'text', 'Kofi Mensah'], ['Email', 'email', 'email', 'you@example.com'], ['Phone number', 'phone', 'tel', '+233'], ['Password', 'pass', 'password', 'At least 8 characters']]
+      : [['Email', 'email', 'email', 'you@example.com'], ['Password', 'pass', 'password', '']];
+    if (isRegister && (s.auth.pass || '').length > 0) authRows.push(['Confirm password', 'confirm', 'password', 'Repeat your password']);
+    const pwd = s.auth.pass || '';
+    const confirm = s.auth.confirm || '';
+    const tooShort = isRegister && pwd.length > 0 && pwd.length < 8;
+    const mismatch = isRegister && confirm.length > 0 && confirm !== pwd;
+    const authValid = !isRegister || (pwd.length >= 8 && confirm === pwd && confirm.length > 0);
+    const noteFor = key => key === 'pass' ? (tooShort ? 'At least 8 characters' : '') : key === 'confirm' ? (mismatch ? 'Passwords do not match' : confirm.length > 0 ? 'Passwords match' : '') : '';
+    const authFields = authRows.map(([label, key, type, placeholder]) => ({
+      label, type, placeholder,
+      value: s.auth[key] || '',
+      note: noteFor(key),
+      noteColor: key === 'confirm' && !mismatch && confirm.length > 0 ? '#12100E' : sig,
+      noteShow: noteFor(key) ? 'block' : 'none',
+      onInput: e => this.setState({ auth: { ...s.auth, [key]: e.target.value } })
+    }));
+
+    const ADMIN_ORDERS = [
+      { no: 'TH-1043', customer: 'Kofi Mensah', phone: '054 123 4567', zone: 'Accra Central', items: '2', total: 930, payment: 'Paid', status: 'Packed' },
+      { no: 'TH-1042', customer: 'Yaw Boateng', phone: '024 987 6543', zone: 'East Legon', items: '3', total: 1850, payment: 'Paid', status: 'Confirmed' },
+      { no: 'TH-1040', customer: 'Ama Serwaa', phone: '020 555 1234', zone: 'Kumasi', items: '1', total: 3500, payment: 'Unpaid', status: 'Pending' },
+      { no: 'TH-1038', customer: 'Nii Armah', phone: '027 441 0092', zone: 'Tema', items: '2', total: 740, payment: 'Paid', status: 'Out for delivery' },
+      { no: 'TH-1037', customer: 'Efua Danso', phone: '055 302 7781', zone: 'Madina', items: '1', total: 420, payment: 'Paid', status: 'Confirmed' }
+    ];
+
+    const adminOrders = ADMIN_ORDERS.map(x => ({
+      no: x.no,
+      customer: x.customer,
+      phone: x.phone,
+      zone: x.zone,
+      items: x.items,
+      total: this.money(x.total),
+      payment: x.payment,
+      payColor: x.payment === 'Unpaid' ? sig : ink,
+      status: x.status,
+      statusColor: x.status === 'Pending' ? sig : ink,
+      open: () => this.setState({ screen: 'admin', adminScreen: 'order' })
+    }));
+
+    const STATUS = ['Pending', 'Confirmed', 'Packed', 'Out for delivery', 'Delivered'];
+    const step = s.adminStatus;
+    const ao = {
+      no: 'TH-1043',
+      status: STATUS[step],
+      itemCount: '2 items',
+      payment: 'Mobile Money · Paid',
+      cta: step >= STATUS.length - 1 ? 'Delivered' : 'Mark as ' + STATUS[step + 1].toLowerCase(),
+      delivery: [
+        { label: 'Name', value: 'Kofi Mensah', font: 'Archivo,sans-serif' },
+        { label: 'Phone', value: '054 123 4567', font: "'IBM Plex Mono',monospace" },
+        { label: 'Address', value: '12 Osu Badu St, Accra', font: 'Archivo,sans-serif' },
+        { label: 'Zone', value: 'Accra Central', font: 'Archivo,sans-serif' },
+        { label: 'Placed', value: '12 Aug 2026 · 14:22', font: "'IBM Plex Mono',monospace" }
+      ],
+      items: [
+        { title: 'Vintage Detroit Jacket', meta: 'Carhartt · XL · Excellent', qty: 'Qty 1', price: this.money(450) },
+        { title: 'Wool Overshirt', meta: 'Pendleton · L · Excellent', qty: 'Qty 1', price: this.money(440) }
+      ],
+      totals: [
+        { label: 'Subtotal', value: this.money(890), size: '13px', labelColor: grey },
+        { label: 'Delivery fee', value: this.money(40), size: '13px', labelColor: grey },
+        { label: 'Total', value: this.money(930), size: '16px', labelColor: ink }
+      ],
+      steps: STATUS.map((label, i) => ({
+        label: i === STATUS.length - 1 ? label : label + '  →',
+        color: i <= step ? ink : grey,
+        rule: i === step ? ink : 'transparent'
+      }))
+    };
+
+    const full = m ? 'span 6' : 'span 6';
+    const third = m ? 'span 6' : 'span 2';
+    const half = m ? 'span 6' : 'span 3';
+    const A = 'Archivo,sans-serif';
+    const M = "'IBM Plex Mono',monospace";
+    const newFields = [
+      { label: 'Title', placeholder: 'e.g. 1990s Carhartt Detroit Jacket', font: A, span: full, help: '', helpShow: 'none' },
+      { label: 'Category', placeholder: 'Jackets', font: A, span: third, help: '', helpShow: 'none' },
+      { label: 'Brand', placeholder: 'Carhartt', font: A, span: third, help: '', helpShow: 'none' },
+      { label: 'Size', placeholder: 'XL', font: A, span: third, help: '', helpShow: 'none' },
+      { label: 'Condition', placeholder: 'Excellent', font: A, span: third, help: '', helpShow: 'none' },
+      { label: 'Price GHS', placeholder: '0.00', font: M, span: third, help: '', helpShow: 'none' },
+      { label: 'Quantity', placeholder: '1', font: M, span: third, help: 'Leave at 1 for one-of-a-kind pieces', helpShow: 'block' },
+      { label: 'Colour', placeholder: 'Hamilton Brown', font: A, span: half, help: '', helpShow: 'none' },
+      { label: 'Era', placeholder: '1990s', font: A, span: half, help: '', helpShow: 'none' },
+      { label: 'Fit notes', placeholder: 'How does this piece measure and drape?', font: A, span: full, help: '', helpShow: 'none' },
+      { label: 'Flaws', placeholder: 'Any notable wear, tear or discolouration', font: A, span: full, help: '', helpShow: 'none' }
+    ];
+
+    const tableHead = ['Order', 'Customer', 'Phone', 'Zone', 'Items', 'Total', 'Payment', 'Status']
+      .map((label, i) => ({ label, align: i >= 5 ? 'right' : 'left' }));
+
+    return {
+      nav, signal: sig,
+      mobile: m,
+      frameW: m ? '390px' : '1280px',
+      frameMaxW: m ? '390px' : '1280px',
+      padX: m ? '20px' : '56px',
+      headH: m ? '60px' : '76px',
+      markSize: m ? '20px' : '26px',
+      gridPadY: m ? '28px' : '44px',
+      gridCols: m ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
+      gridGap: m ? '36px' : '52px',
+      filterGap: m ? '18px' : '32px',
+      filterWrap: m ? 'wrap' : 'nowrap',
+      h1Size: m ? '38px' : '56px',
+      h2Size: m ? '28px' : '36px',
+      pdCols: m ? '1fr' : '60% 1fr',
+      pdTitleSize: m ? '30px' : '36px',
+      thumbDir: m ? 'column' : 'row',
+      thumbStripDir: m ? 'row' : 'column',
+      thumbOrder: m ? '2' : '0',
+      thumbW: m ? '72px' : '84px',
+      cartCols: m ? '1fr' : '1fr 320px',
+      lineCols: m ? '84px 1fr' : '110px 1fr 130px',
+      lineThumbW: m ? '84px' : '110px',
+      linePriceCol: m ? '2' : 'auto',
+      linePriceAlign: m ? 'left' : 'right',
+      linePriceTop: m ? '14px' : '0',
+      newFields,
+      coCols: m ? '1fr' : '1fr 380px',
+      ordCols: m ? '1fr 1fr' : '120px 150px 1fr 130px 150px',
+      ordAlign: m ? 'left' : 'right',
+      admCols: m ? '1fr' : '210px 1fr',
+      admSidePad: m ? '24px 20px' : '40px 28px',
+      admNavDir: m ? 'row' : 'column',
+      admPad: m ? '28px 20px 96px' : '44px 56px 120px',
+      metricCols: m ? 'repeat(2,1fr)' : '1.5fr repeat(3,1fr)',
+      metricPad: m ? '16px' : '24px',
+      metricSize: m ? '24px' : '32px',
+      tableMinW: '900px',
+      tblCols: '110px 150px 130px 130px 70px 130px 100px 130px',
+      newCols: m ? '1fr' : '35% 1fr',
+      aoCols: m ? '1fr' : '1fr 320px',
+
+      isStore: store,
+      isCatalog: s.screen === 'catalog',
+      isProduct: s.screen === 'product',
+      isCart: s.screen === 'cart',
+      isCheckout: s.screen === 'checkout',
+      isConfirm: s.screen === 'confirm',
+      isOrders: s.screen === 'orders',
+      isLogin: s.screen === 'login',
+      isAccount: s.screen === 'account',
+      accountMaxW: (s.accountTab === 'orders') ? '860px' : '560px',
+      isAccountOrders: s.accountTab === 'orders',
+      detailsShow: s.accountTab === 'orders' ? 'none' : 'block',
+      accountTabs: [['details', 'Details'], ['orders', 'My orders']].map(([k, label]) => ({
+        label,
+        color: (s.accountTab || 'details') === k ? ink : grey,
+        rule: (s.accountTab || 'details') === k ? ink : 'transparent',
+        pick: () => this.setState({ accountTab: k })
+      })),
+      signedIn: s.signedIn !== false,
+      signedOut: s.signedIn === false,
+      signOutShow: s.signedIn === false ? 'none' : 'block',
+      accountFields: [
+        { label: 'Name', key: 'name', font: 'Archivo,sans-serif' },
+        { label: 'Email', key: 'email', font: 'Archivo,sans-serif' },
+        { label: 'Phone', key: 'phone', font: "'IBM Plex Mono',monospace" },
+        { label: 'Default address', key: 'address', font: 'Archivo,sans-serif' }
+      ].map(f => ({
+        label: f.label,
+        font: f.font,
+        value: (s.user || {})[f.key] || '',
+        onInput: e => {
+          const v = e.target.value;
+          this.setState(st => ({
+            user: { ...st.user, [f.key]: v },
+            form: f.key === 'email' ? st.form : { ...st.form, [f.key]: v }
+          }));
+        }
+      })),
+      accountZone: (s.user || {}).zone || '',
+      onAccountZone: e => {
+        const v = e.target.value;
+        this.setState(st => ({ user: { ...st.user, zone: v }, form: { ...st.form, zone: v } }));
+      },
+      signOut: () => this.setState({ signedIn: false, screen: 'login', auth: { mode: 'signin', name: '', email: '', phone: '', pass: '', confirm: '' } }),
+      goSignIn: this.go('login'),
+      isStates: s.screen === 'states',
+      isAdmin: s.screen === 'admin',
+      isAdminDash: s.adminScreen === 'dashboard',
+      isAdminNew: s.adminScreen === 'new',
+      isAdminOrder: s.adminScreen === 'order',
+      showBottomNav: store && m,
+      showIndex: this.props.showIndexNumbers ?? true,
+      indexColor: '#8C877D',
+
+      deskColor: m ? grey : '#12100E',
+      deskBg: m ? 'transparent' : '#FAF9F6',
+      mobColor: m ? '#12100E' : grey,
+      mobBg: m ? '#FAF9F6' : 'transparent',
+      setDesktop: () => this.setState({ mobile: false }),
+      setMobile: () => this.setState({ mobile: true }),
+
+      goCatalog: this.go('catalog'),
+      goCart: this.go('cart'),
+      goCheckout: () => { if (!anyExpired) this.setState({ screen: 'checkout' }); },
+      goOrders: () => this.setState({ screen: 'account', accountTab: 'orders', openFilter: null, sortOpen: false }),
+      goAdminDash: () => this.setState({ screen: 'admin', adminScreen: 'dashboard' }),
+
+      cartCount: s.cart.length,
+      searchOpen: !!s.searchOpen,
+      query: s.query || '',
+      onQuery: e => this.setState({ query: e.target.value }),
+      toggleSearch: () => this.setState({ screen: 'catalog', searchOpen: !s.searchOpen, query: s.searchOpen ? '' : (s.query || ''), openFilter: null, sortOpen: false }),
+      products,
+      filterDefs,
+      resultCount: visible.length + (visible.length === 1 ? ' piece' : ' pieces'),
+      noResults: visible.length === 0,
+      clearShow: Object.keys(s.filters).some(k => s.filters[k] !== 'All') ? 'block' : 'none',
+      clearFilters: () => this.setState({ filters: { Category: 'All', Size: 'All', Brand: 'All', Condition: 'All', Price: 'All' }, openFilter: null }),
+      sortText: 'Sort: ' + s.sort,
+      sortOpen: s.sortOpen,
+      toggleSort: () => this.setState({ sortOpen: !s.sortOpen, openFilter: null }),
+      sortOptions: this.SORTS.map(x => ({ label: x, color: ink, pick: () => this.setState({ sort: x, sortOpen: false }) })),
+
+      pd: pdView,
+      specs,
+      thumbs,
+      heroPlate: pd.plate,
+      addToCart: () => this.addToCart(),
+
+      cartLines,
+      cartEmpty: s.cart.length === 0,
+      cartShow: s.cart.length === 0 ? 'none' : 'grid',
+      subtotal: this.money(t.sub),
+      deliveryText: t.zone ? this.money(t.fee) : 'Select a zone',
+      total: this.money(t.sub + t.fee),
+      checkoutBlocked: anyExpired,
+      checkoutBg: anyExpired ? '#C9C5BC' : ink,
+      checkoutCursor: anyExpired ? 'not-allowed' : 'pointer',
+      expiredShow: anyExpired ? 'block' : 'none',
+
+      form: s.form,
+      err: {
+        name: s.errors.name ? 'block' : 'none',
+        phone: s.errors.phone ? 'block' : 'none',
+        address: s.errors.address ? 'block' : 'none',
+        zone: s.errors.zone ? 'block' : 'none'
+      },
+      zones: this.ZONES.map(z => ({ name: z.name, label: z.name + ' · ' + this.money(z.fee) })),
+      payments,
+      onName: e => this.setState({ form: { ...s.form, name: e.target.value } }),
+      onPhone: e => this.setState({ form: { ...s.form, phone: e.target.value } }),
+      onAddress: e => this.setState({ form: { ...s.form, address: e.target.value } }),
+      onZone: e => this.setState({ form: { ...s.form, zone: e.target.value } }),
+      payLabel: s.form.pay === 'cod' ? 'Place order · ' + this.money(t.sub + t.fee) : 'Pay ' + this.money(t.sub + t.fee),
+      payNote: s.form.pay === 'cod' ? 'Pay the rider on delivery' : 'Processed securely via Paystack',
+      placeOrder: () => this.placeOrder(),
+
+      confirmRows,
+      myOrders,
+
+      authTitle: isRegister ? 'Create account' : 'Sign in',
+      authSub: isRegister ? 'You need an account to hold a piece. Browsing stays open.' : 'Welcome back.',
+      authFields,
+      authCta: isRegister ? 'Create account' : 'Sign in',
+      authSwitch: isRegister ? 'Have an account? Sign in' : 'New here? Create an account',
+      toggleAuth: () => this.setState({ auth: { ...s.auth, mode: isRegister ? 'signin' : 'register' } }),
+      doAuth: () => {
+        if (!authValid) return;
+        this.setState({
+          screen: 'catalog', signedIn: true,
+          user: { name: s.auth.name || 'Kofi Mensah', email: s.auth.email || 'kofi@example.com', phone: s.auth.phone || '054 123 4567' }
+        });
+      },
+      authBtnBg: authValid ? ink : '#C9C5BC',
+      authBtnCursor: authValid ? 'pointer' : 'not-allowed',
+
+      skeletons: [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ n })),
+
+      adminNav: [['dashboard', 'Dashboard'], ['new', 'Products'], ['order', 'Orders']].map(([k, label]) => ({
+        label,
+        rule: s.adminScreen === k ? ink : 'transparent',
+        color: s.adminScreen === k ? ink : grey,
+        go: () => this.setState({ adminScreen: k })
+      })),
+      metrics: [
+        { label: 'Total revenue', value: this.money(24380), rule: 'transparent' },
+        { label: 'Orders', value: '63', rule: rule },
+        { label: 'Items sold', value: '78', rule: rule },
+        { label: 'Live stock', value: '41', rule: rule }
+      ],
+      tableHead,
+      adminOrders,
+      newThumbs: [1, 2, 3].map(n => ({ n: String(n), badgeBg: n === 1 ? ink : 'transparent', badgeColor: n === 1 ? '#FFFFFF' : grey })),
+      ao,
+      advanceStatus: () => this.setState({ adminStatus: Math.min(4, s.adminStatus + 1) }),
+      goLogin: () => this.setState({ screen: s.signedIn === false ? 'login' : 'account', openFilter: null, sortOpen: false }),
+      tabShop: ['catalog', 'product'].indexOf(s.screen) >= 0 ? ink : grey,
+      tabCart: ['cart', 'checkout', 'confirm'].indexOf(s.screen) >= 0 ? ink : grey,
+      tabAccount: ['login', 'orders', 'account'].indexOf(s.screen) >= 0 ? ink : grey
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Add Product - ARCHIVE 233</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;family=Archivo+Narrow:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#c8c6c8",
+                        "inverse-surface": "#2f312f",
+                        "on-primary-fixed": "#1d1b19",
+                        "background": "#faf9f6",
+                        "primary-fixed": "#e8e1dd",
+                        "tertiary": "#000000",
+                        "surface-container-highest": "#e3e2e0",
+                        "on-error": "#ffffff",
+                        "on-surface": "#1a1c1a",
+                        "inverse-primary": "#cbc5c2",
+                        "on-primary-fixed-variant": "#494643",
+                        "outline-variant": "#cec5bd",
+                        "primary-container": "#1d1b19",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed": "#1b1b1d",
+                        "on-tertiary-fixed-variant": "#474649",
+                        "on-background": "#1a1c1a",
+                        "surface-tint": "#615e5b",
+                        "primary-fixed-dim": "#cbc5c2",
+                        "image-plate": "#FFFFFF",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#1b1b1d",
+                        "secondary-fixed-dim": "#ccc6bb",
+                        "surface-container-low": "#f4f3f1",
+                        "surface-container": "#efeeeb",
+                        "on-tertiary-container": "#858386",
+                        "secondary-fixed": "#e9e2d6",
+                        "on-secondary-fixed": "#1e1b14",
+                        "secondary-container": "#e9e2d6",
+                        "on-secondary": "#ffffff",
+                        "primary": "#000000",
+                        "signal": "#B23A20",
+                        "surface-dim": "#dbdad7",
+                        "surface-bright": "#faf9f6",
+                        "on-secondary-fixed-variant": "#4a463e",
+                        "on-secondary-container": "#68645b",
+                        "secondary": "#625e55",
+                        "on-surface-variant": "#4c4640",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "hairline": "#E4E1DA",
+                        "outline": "#7d766f",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#e3e2e0",
+                        "inverse-on-surface": "#f2f1ee",
+                        "tertiary-fixed": "#e5e1e4",
+                        "surface-container-high": "#e9e8e5",
+                        "on-primary-container": "#888380",
+                        "surface": "#faf9f6"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                    spacing: {
+                        "margin-desktop": "64px",
+                        "gutter": "32px",
+                        "margin-mobile": "20px",
+                        "unit": "8px"
+                    },
+                    fontFamily: {
+                        "display-lg-mobile": ["Libre Caslon Text"],
+                        "display-lg": ["Libre Caslon Text"],
+                        "data-mono": ["IBM Plex Mono"],
+                        "body-sm": ["Archivo Narrow"],
+                        "body-base": ["Archivo Narrow"],
+                        "metadata-label": ["Archivo Narrow"],
+                        "headline-md": ["Libre Caslon Text"]
+                    },
+                    fontSize: {
+                        "display-lg-mobile": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+                        "display-lg": ["64px", { "lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-base": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "metadata-label": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 100, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom minimal input styles */
+        .admin-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #E4E1DA;
+            padding: 8px 0;
+            font-family: 'Archivo Narrow', sans-serif;
+            font-size: 16px;
+            color: #12100E;
+        }
+        .admin-input:focus {
+            outline: none;
+            border-bottom-color: #12100E;
+            box-shadow: none;
+        }
+        .admin-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #8C877D;
+            display: block;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background text-primary min-h-screen flex flex-col font-body-base">
+<!-- TopNavBar (Derived from JSON) -->
+
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-screen-2xl mx-auto px-margin-desktop py-margin-desktop grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Header / Breadcrumbs (Optional but good for admin) -->
+<div class="col-span-full mb-8">
+<h1 class="font-display-lg text-display-lg tracking-tighter text-primary">New Item</h1>
+</div>
+<!-- Left Column: Image Upload (35% -> roughly 4 columns in a 12-col grid) -->
+<div class="col-span-1 md:col-span-4 flex flex-col gap-6">
+<!-- Dropzone -->
+<div class="w-full aspect-[3/4] border border-dashed border-hairline flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-outline mb-4 group-hover:text-primary transition-colors" data-icon="add_photo_alternate">add_photo_alternate</span>
+<span class="font-body-base text-body-base text-primary">Drop photos</span>
+<span class="font-body-sm text-body-sm text-outline mt-1">Max 6</span>
+</div>
+<!-- Thumbnails -->
+<div class="grid grid-cols-3 gap-4">
+<!-- Primary Thumbnail -->
+<div class="aspect-[3/4] bg-surface-container-highest relative cursor-move hover:opacity-80 transition-opacity" data-alt="A minimalist overhead shot of a vintage black leather jacket laid flat against a pristine white studio background. High contrast, sharp focus, stark architectural lighting highlighting the texture of the leather. The mood is clinical and archival." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD9VCIaNrmS7tHpDrLHyp_Y6811At_7ejluthw-UGzb7-3So8MF6w3aW0beOW1HS_jPle29OnxhSNB4_Jv1B-S_u4OVEycmCQFsXhTa5Vjla6wo5BhVWnDZY4eP_l4VM815RbUFJ_4IT1wVlhenH4aYQoThz-qCO019Wq7-7rLHwan2h9mkEPq38eEoyLIx7l46BWaVhrp7UsgfXt5tCiOaEsq3u5iFno8Um-LiQa16vGKeX7AKUghbCQ')">
+<div class="absolute top-0 left-0 bg-primary text-on-primary w-5 h-5 flex items-center justify-center font-data-mono text-[10px]">1</div>
+</div>
+<!-- Empty Slots -->
+<div class="aspect-[3/4] bg-surface border border-hairline flex items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="add">add</span>
+</div>
+<div class="aspect-[3/4] bg-surface border border-hairline flex items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="add">add</span>
+</div>
+</div>
+<!-- Reorder Caption -->
+<div class="text-center w-full">
+<span class="font-data-mono text-[11px] uppercase text-[#8C877D] tracking-widest">Drag to reorder</span>
+</div>
+</div>
+<!-- Right Column: Form Fields (65% -> roughly 8 columns in a 12-col grid) -->
+<div class="col-span-1 md:col-span-8 flex flex-col pt-2">
+<form class="flex flex-col gap-8">
+<!-- Row 1: Title -->
+<div class="w-full">
+<label class="admin-label" for="title">Title</label>
+<input class="admin-input" id="title" placeholder="e.g. 1998 Helmut Lang Painter Denim" type="text">
+</div>
+<!-- Row 2: Category, Brand, Size -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div>
+<label class="admin-label" for="category">Category</label>
+<input class="admin-input" id="category" type="text">
+</div>
+<div>
+<label class="admin-label" for="brand">Brand</label>
+<input class="admin-input" id="brand" type="text">
+</div>
+<div>
+<label class="admin-label" for="size">Size</label>
+<input class="admin-input" id="size" type="text">
+</div>
+</div>
+<!-- Row 3: Condition, Price, Quantity -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div>
+<label class="admin-label" for="condition">Condition</label>
+<input class="admin-input" id="condition" placeholder="e.g. 8/10" type="text">
+</div>
+<div>
+<label class="admin-label" for="price">Price GHS</label>
+<input class="admin-input" id="price" placeholder="0.00" type="number">
+</div>
+<div>
+<label class="admin-label" for="quantity">Quantity</label>
+<input class="admin-input" id="quantity" type="number" value="1">
+<span class="font-body-sm text-[12px] text-outline mt-2 block">Leave at 1 for one-of-a-kind pieces</span>
+</div>
+</div>
+<!-- Row 4: Colour, Era -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div>
+<label class="admin-label" for="colour">Colour</label>
+<input class="admin-input" id="colour" type="text">
+</div>
+<div>
+<label class="admin-label" for="era">Era</label>
+<input class="admin-input" id="era" placeholder="e.g. AW99" type="text">
+</div>
+</div>
+<!-- Row 5: Fit notes -->
+<div class="w-full">
+<label class="admin-label" for="fit-notes">Fit notes</label>
+<input class="admin-input" id="fit-notes" placeholder="How does this piece measure and drape?" type="text">
+</div>
+<!-- Row 6: Flaws -->
+<div class="w-full">
+<label class="admin-label" for="flaws">Flaws</label>
+<input class="admin-input" id="flaws" placeholder="List any notable wear, tear, or discoloration." type="text">
+</div>
+</form>
+<!-- Actions Spacer to push to bottom if needed, though with gap it should flow naturally -->
+<div class="mt-16 pt-8 border-t border-hairline flex flex-col md:flex-row items-center justify-end gap-6">
+<button class="font-body-base text-body-base text-[#12100E] uppercase tracking-widest hover:opacity-70 transition-opacity">
+                    Save draft
+                </button>
+<button class="font-body-base text-body-base border border-[#12100E] text-[#12100E] px-8 py-3 uppercase tracking-widest hover:bg-surface-container-low transition-colors rounded-none">
+                    Publish and add another
+                </button>
+<button class="font-body-base text-body-base bg-[#12100E] text-on-primary px-8 py-3 uppercase tracking-widest hover:bg-primary-fixed-variant transition-colors rounded-none">
+                    Publish
+                </button>
+</div>
+</div>
+</main>
+<!-- Footer (Derived from JSON) -->
+<footer class="bg-background dark:bg-background border-t border-hairline dark:border-hairline w-full mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center w-full px-margin-desktop py-12 max-w-screen-2xl mx-auto gap-gutter">
+<span class="font-headline-md text-headline-md text-primary dark:text-primary">ARCHIVE 233</span>
+<div class="flex flex-wrap gap-6 items-center justify-center">
+<a class="font-data-mono text-data-mono uppercase text-secondary hover:underline transition-all" href="#">TERMS</a>
+<a class="font-data-mono text-data-mono uppercase text-secondary hover:underline transition-all" href="#">PRIVACY</a>
+<a class="font-data-mono text-data-mono uppercase text-secondary hover:underline transition-all" href="#">SHIPPING</a>
+<a class="font-data-mono text-data-mono uppercase text-secondary hover:underline transition-all" href="#">CONTACT</a>
+</div>
+<span class="font-data-mono text-data-mono uppercase text-primary dark:text-primary">© 2024 ARCHIVE 233. ALL RIGHTS RESERVED.</span>
+</div>
+</footer>
+
+
+</body></html>

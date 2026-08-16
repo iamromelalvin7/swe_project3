@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Checkout - ARCHIVE 233</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts mapping for Archive 233 -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400;0,500;0,700;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error": "#ba1a1a",
+                        "tertiary": "#000000",
+                        "surface-bright": "#faf9f6",
+                        "inverse-on-surface": "#f2f1ee",
+                        "on-tertiary-fixed-variant": "#474649",
+                        "primary-container": "#1d1b19",
+                        "on-secondary-fixed": "#1e1b14",
+                        "surface-variant": "#e3e2e0",
+                        "background": "#faf9f6",
+                        "tertiary-container": "#1b1b1d",
+                        "on-surface-variant": "#4c4640",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#494643",
+                        "inverse-primary": "#cbc5c2",
+                        "on-primary": "#ffffff",
+                        "outline-variant": "#cec5bd",
+                        "secondary-fixed": "#e9e2d6",
+                        "surface-tint": "#615e5b",
+                        "surface-container-low": "#f4f3f1",
+                        "on-background": "#1a1c1a",
+                        "primary-fixed-dim": "#cbc5c2",
+                        "signal": "#B23A20",
+                        "tertiary-fixed-dim": "#c8c6c8",
+                        "secondary-container": "#e9e2d6",
+                        "secondary-fixed-dim": "#ccc6bb",
+                        "on-tertiary-fixed": "#1b1b1d",
+                        "on-primary-container": "#888380",
+                        "surface": "#faf9f6",
+                        "surface-container-highest": "#e3e2e0",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#68645b",
+                        "image-plate": "#FFFFFF",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2f312f",
+                        "on-primary-fixed": "#1d1b19",
+                        "hairline": "#E4E1DA",
+                        "on-secondary-fixed-variant": "#4a463e",
+                        "surface-container-high": "#e9e8e5",
+                        "on-surface": "#1a1c1a",
+                        "primary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#dbdad7",
+                        "on-tertiary-container": "#858386",
+                        "tertiary-fixed": "#e5e1e4",
+                        "primary-fixed": "#e8e1dd",
+                        "surface-container": "#efeeeb",
+                        "outline": "#7d766f",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#625e55"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "32px",
+                        "margin-desktop": "64px",
+                        "margin-mobile": "20px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Archivo Narrow"],
+                        "data-mono": ["IBM Plex Mono"],
+                        "headline-md": ["Libre Caslon Text"],
+                        "body-base": ["Archivo Narrow"],
+                        "display-lg-mobile": ["Libre Caslon Text"],
+                        "metadata-label": ["Archivo Narrow"],
+                        "display-lg": ["Libre Caslon Text"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "fontWeight": "400" }],
+                        "body-base": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg-mobile": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+                        "metadata-label": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "display-lg": ["64px", { "lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hide scrollbar for clean aesthetic */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        /* Reset form inputs to flat editorial style */
+        input[type="text"], input[type="tel"], textarea, select {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23000000%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat, repeat;
+            background-position: right .7em top 50%, 0 0;
+            background-size: .65em auto, 100%;
+        }
+    </style>
+</head>
+<body class="bg-background text-primary antialiased min-h-screen selection:bg-surface-variant selection:text-primary">
+<!-- Suppressed TopNavBar & Footer due to Transactional/Checkout Intent -->
+<main class="w-full max-w-screen-2xl mx-auto px-margin-mobile md:px-margin-desktop py-margin-desktop md:py-24">
+<div class="flex flex-col lg:flex-row gap-gutter lg:gap-24 w-full">
+<!-- Left Column: Form Canvas (60%) -->
+<section class="w-full lg:w-3/5 flex flex-col gap-16">
+<header>
+<a class="inline-flex items-center gap-2 mb-12 hover:opacity-70 transition-opacity" href="#">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+<span class="font-metadata-label text-metadata-label uppercase">Return to Cart</span>
+</a>
+<h1 class="font-display-lg text-display-lg uppercase tracking-tight">Checkout</h1>
+</header>
+<form class="flex flex-col gap-12">
+<!-- Contact & Shipping Details -->
+<div class="flex flex-col gap-8">
+<div class="flex flex-col gap-2 group">
+<label class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest" for="full_name">Full Name</label>
+<input class="w-full bg-transparent border-0 border-b border-hairline py-3 px-0 font-body-base text-body-base text-primary placeholder:text-outline-variant focus:ring-0 focus:border-primary transition-colors" id="full_name" name="full_name" placeholder="Enter your full name" type="text"/>
+</div>
+<div class="flex flex-col gap-2 group">
+<label class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest" for="phone">Phone Number</label>
+<input class="w-full bg-transparent border-0 border-b border-hairline py-3 px-0 font-body-base text-body-base text-primary placeholder:text-outline-variant focus:ring-0 focus:border-primary transition-colors" id="phone" name="phone" placeholder="+233" type="tel"/>
+</div>
+<div class="flex flex-col gap-2 group">
+<label class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest" for="address">Delivery Address</label>
+<textarea class="w-full bg-transparent border-0 border-b border-hairline py-3 px-0 font-body-base text-body-base text-primary placeholder:text-outline-variant focus:ring-0 focus:border-primary transition-colors resize-none" id="address" name="address" placeholder="Street address, building, floor..." rows="3"></textarea>
+</div>
+<div class="flex flex-col gap-2 group">
+<label class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest" for="zone">Delivery Zone</label>
+<select class="w-full bg-transparent border-0 border-b border-hairline py-3 px-0 pr-8 font-body-base text-body-base text-primary focus:ring-0 focus:border-primary transition-colors cursor-pointer" id="zone" name="zone">
+<option class="text-outline-variant" disabled="" selected="" value="">Select zone</option>
+<option value="accra_central">Accra Central</option>
+<option value="east_legon">East Legon</option>
+<option value="tema">Tema</option>
+<option value="madina">Madina</option>
+<option value="kumasi">Kumasi</option>
+</select>
+</div>
+</div>
+<!-- Payment Method Section -->
+<div class="flex flex-col gap-6 pt-8 border-t border-hairline">
+<h2 class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest">Payment Method</h2>
+<div class="flex flex-col border-t border-b border-hairline">
+<!-- Active Selection -->
+<label class="flex items-center gap-4 py-6 border-l-2 border-primary pl-6 pr-4 cursor-pointer hover:bg-surface-container-low transition-colors group">
+<input checked="" class="sr-only peer" name="payment_method" type="radio" value="paystack"/>
+<span class="font-body-base text-body-base text-primary peer-checked:font-bold">Mobile Money / Card — via Paystack</span>
+<span class="material-symbols-outlined ml-auto text-primary opacity-100" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</label>
+<!-- Inactive Selection -->
+<label class="flex items-center gap-4 py-6 border-l-2 border-transparent border-t border-hairline pl-6 pr-4 cursor-pointer hover:bg-surface-container-low transition-colors group">
+<input class="sr-only peer" name="payment_method" type="radio" value="cod"/>
+<span class="font-body-base text-body-base text-primary peer-checked:font-bold group-hover:text-primary">Cash on delivery</span>
+<span class="material-symbols-outlined ml-auto text-outline-variant opacity-0 peer-checked:opacity-100 transition-opacity" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</label>
+</div>
+</div>
+</form>
+</section>
+<!-- Right Column: Sticky Order Summary (40%) -->
+<aside class="w-full lg:w-2/5 relative">
+<div class="sticky top-margin-desktop flex flex-col gap-8 bg-surface-container-lowest border border-hairline p-8 md:p-12">
+<h2 class="font-metadata-label text-metadata-label text-secondary uppercase tracking-widest border-b border-hairline pb-4">Order Summary</h2>
+<!-- Itemized List -->
+<div class="flex flex-col gap-6 border-b border-hairline pb-8">
+<!-- Product Item 1 -->
+<div class="flex flex-row gap-6 items-start">
+<img class="w-20 h-28 object-cover bg-image-plate" data-alt="A minimalist, high-fashion editorial shot of a men's structured black blazer on a raw wooden hanger against a pure white background. The lighting is crisp and even, eliminating deep shadows to create a flat, architectural presentation. The focus is entirely on the garment's texture and silhouette, fitting a sophisticated, contemporary archive gallery aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDA-IsFX9bRuvvBQbaPieHyhWo97LA-cs99ZfD7p6K1G5bGLuFA1Q4skG7hLKsviX5Q98CCl8NoVlCWh35F0K39jku-qCqsfSR5k8a0yXAp6YKsK9zDmUSm0vmwdledxypGSfcqSBPqOYXzXQEaPn4M6u_GvC8IYSGusNLPmdMdqWnz3n1cXg3R3dBIcPgG7g07PMvkN8SjQtm7dXi69_sHOrRxHo0lzCK6Uu0_mv0Wv0qZaqAo-qTXjg"/>
+<div class="flex flex-col flex-grow pt-1">
+<span class="font-body-base text-body-base text-primary uppercase">Structured Wool Blazer</span>
+<span class="font-metadata-label text-metadata-label text-secondary mt-1">Size: 42L</span>
+<span class="font-data-mono text-data-mono text-primary mt-auto pt-4">GH₵ 850.00</span>
+</div>
+</div>
+<!-- Product Item 2 -->
+<div class="flex flex-row gap-6 items-start">
+<img class="w-20 h-28 object-cover bg-image-plate" data-alt="A close-up, minimalist still life of a pair of tailored men's trousers in a muted olive tone, neatly folded on a stark white plinth. The composition is highly structured and geometric, illuminated by soft, high-key studio lighting. The overall mood is clinical yet premium, emphasizing the fabric's drape and the precise stitching, aligning with a high-end menswear catalog look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXcZ43wVTcEFP77KvI-yYa8lzn8hTaJWuCWiDTC3EdxDM8PLpeqO--hipnNhMgqIVCVnFwsCg49DNeqsTXxb3q_4NIY18fq0f3Nt4gKwv08QxcY6RIf-hvsIUuUZiXa5NazkeLFhUN_7cmrCA2uxOuZ2Qydd5cnAvsZQWpI8f5jF16xzcDHxBNIqB2pwLFCGHJihWSw_735TcyVYNez-KEKNVg45nrX1mQUZF1ixyLxicKM1GJ44BSFA"/>
+<div class="flex flex-col flex-grow pt-1">
+<span class="font-body-base text-body-base text-primary uppercase">Pleated Olive Trousers</span>
+<span class="font-metadata-label text-metadata-label text-secondary mt-1">Size: 32</span>
+<span class="font-data-mono text-data-mono text-primary mt-auto pt-4">GH₵ 350.00</span>
+</div>
+</div>
+</div>
+<!-- Totals Calculation -->
+<div class="flex flex-col gap-4 border-b border-hairline pb-8">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-secondary">Subtotal</span>
+<span class="font-data-mono text-data-mono text-primary">GH₵ 1,200.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-secondary">Delivery</span>
+<span class="font-data-mono text-data-mono text-primary">GH₵ 40.00</span>
+</div>
+</div>
+<!-- Final Total -->
+<div class="flex justify-between items-end pb-4">
+<span class="font-body-base text-body-base uppercase tracking-widest text-primary">Total</span>
+<span class="font-data-mono text-data-mono text-primary text-lg">GH₵ 1,240.00</span>
+</div>
+<!-- CTA Button -->
+<button class="w-full bg-primary text-on-primary py-5 px-6 font-metadata-label text-metadata-label uppercase tracking-widest flex justify-center items-center gap-2 hover:opacity-80 transition-opacity rounded-none border border-primary" type="button">
+                        PAY GH₵ 1,240.00
+                        <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+<p class="font-metadata-label text-metadata-label text-outline text-center mt-2 lowercase">Payments are securely processed via Paystack.</p>
+</div>
+</aside>
+</div>
+</main>
+<script>
+        // Micro-interaction for handling radio button selection styling
+        document.addEventListener('DOMContentLoaded', () => {
+            const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
+            
+            paymentRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    // Reset all borders and icons
+                    paymentRadios.forEach(r => {
+                        const label = r.closest('label');
+                        const icon = label.querySelector('.material-symbols-outlined');
+                        label.classList.remove('border-primary');
+                        label.classList.add('border-transparent');
+                        icon.classList.remove('text-primary');
+                        icon.classList.add('text-outline-variant');
+                        icon.classList.remove('opacity-100');
+                        icon.classList.add('opacity-0');
+                        label.querySelector('span:first-of-type').classList.remove('font-bold');
+                    });
+
+                    // Set active state
+                    if (e.target.checked) {
+                        const activeLabel = e.target.closest('label');
+                        const activeIcon = activeLabel.querySelector('.material-symbols-outlined');
+                        activeLabel.classList.add('border-primary');
+                        activeLabel.classList.remove('border-transparent');
+                        activeIcon.classList.add('text-primary');
+                        activeIcon.classList.remove('text-outline-variant');
+                        activeIcon.classList.add('opacity-100');
+                        activeIcon.classList.remove('opacity-0');
+                        activeLabel.querySelector('span:first-of-type').classList.add('font-bold');
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>

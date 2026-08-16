@@ -1,0 +1,15 @@
+Use the claude_design MCP (https://api.anthropic.com/v1/design/mcp, auth via /design-login) to import this project:
+https://claude.ai/design/p/5c92af79-19e3-41fc-8d2a-3902a9289d18?file=Archive+233.dc.html
+
+Focus on these files (the whole project is readable):
+- `Archive 233.dc.html`
+- `_ds/industry-fa89ff96-2d38-4d39-93d5-96562de80809/_adherence.oxlintrc.json`
+- `_ds/industry-fa89ff96-2d38-4d39-93d5-96562de80809/_ds_bundle.js`
+- `_ds/industry-fa89ff96-2d38-4d39-93d5-96562de80809/_ds_manifest.json`
+- `_ds/industry-fa89ff96-2d38-4d39-93d5-96562de80809/readme.md`
+- `_ds/industry-fa89ff96-2d38-4d39-93d5-96562de80809/styles.css`
+
+Also read these files the selection imports:
+- `support.js`
+
+Implement: the selected files

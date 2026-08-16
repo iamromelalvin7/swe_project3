@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Archive 233 - Order Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "hairline": "#E4E1DA",
+                    "secondary-fixed-dim": "#ccc6bb",
+                    "surface-tint": "#615e5b",
+                    "background": "#faf9f6",
+                    "on-tertiary-fixed-variant": "#474649",
+                    "tertiary": "#000000",
+                    "surface-container-highest": "#e3e2e0",
+                    "error": "#ba1a1a",
+                    "primary-fixed-dim": "#cbc5c2",
+                    "tertiary-container": "#1b1b1d",
+                    "error-container": "#ffdad6",
+                    "on-error-container": "#93000a",
+                    "surface-container-high": "#e9e8e5",
+                    "on-surface-variant": "#4c4640",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#68645b",
+                    "surface-container-low": "#f4f3f1",
+                    "inverse-on-surface": "#f2f1ee",
+                    "on-error": "#ffffff",
+                    "secondary": "#625e55",
+                    "on-secondary": "#ffffff",
+                    "on-background": "#1a1c1a",
+                    "primary-fixed": "#e8e1dd",
+                    "secondary-fixed": "#e9e2d6",
+                    "on-primary": "#ffffff",
+                    "surface-variant": "#e3e2e0",
+                    "surface-dim": "#dbdad7",
+                    "on-tertiary-container": "#858386",
+                    "on-secondary-fixed": "#1e1b14",
+                    "on-tertiary-fixed": "#1b1b1d",
+                    "on-primary-fixed-variant": "#494643",
+                    "inverse-surface": "#2f312f",
+                    "on-tertiary": "#ffffff",
+                    "secondary-container": "#e9e2d6",
+                    "on-primary-fixed": "#1d1b19",
+                    "on-primary-container": "#888380",
+                    "tertiary-fixed-dim": "#c8c6c8",
+                    "primary-container": "#1d1b19",
+                    "surface-bright": "#faf9f6",
+                    "image-plate": "#FFFFFF",
+                    "inverse-primary": "#cbc5c2",
+                    "outline": "#7d766f",
+                    "primary": "#000000",
+                    "on-surface": "#1a1c1a",
+                    "tertiary-fixed": "#e5e1e4",
+                    "signal": "#B23A20",
+                    "surface-container": "#efeeeb",
+                    "surface": "#faf9f6",
+                    "outline-variant": "#cec5bd",
+                    "on-secondary-fixed-variant": "#4a463e"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem", // Overridden to 2px max
+                    "lg": "0.125rem",
+                    "xl": "0.125rem",
+                    "full": "0.125rem"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "gutter": "32px",
+                    "margin-desktop": "64px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Instrument Serif", "serif"],
+                    "display-lg-mobile": ["Instrument Serif", "serif"],
+                    "metadata-label": ["IBM Plex Mono", "monospace"],
+                    "body-base": ["Archivo Narrow", "sans-serif"],
+                    "headline-md": ["Instrument Serif", "serif"],
+                    "data-mono": ["IBM Plex Mono", "monospace"],
+                    "body-sm": ["Archivo Narrow", "sans-serif"]
+            },
+            "fontSize": {
+                    "display-lg": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "400"}],
+                    "display-lg-mobile": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+                    "metadata-label": ["11px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500"}],
+                    "body-base": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "400"}],
+                    "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        /* Base styles enforcing the strict editorial aesthetic */
+        body {
+            background-color: #FAF9F6; /* background token */
+            color: #12100E; /* Primary text */
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Custom heading specific to instructions */
+        .text-order-heading {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 28px;
+            font-weight: 400;
+            line-height: 1.2;
+        }
+        .text-muted {
+            color: #8C877D;
+        }
+        /* Ensure no generic border radiuses sneak in from forms plugin */
+        input, select, textarea, button {
+            border-radius: 2px !important;
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen font-body-base text-primary py-margin-desktop px-margin-mobile md:px-margin-desktop">
+<main class="max-w-screen-2xl mx-auto flex flex-col gap-gutter">
+<!-- Header Section -->
+<header class="flex items-end justify-between border-b border-hairline pb-unit">
+<div class="flex items-center gap-4">
+<a class="text-on-surface-variant hover:opacity-70 transition-opacity" href="#">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</a>
+<h1 class="text-order-heading uppercase tracking-tight">TH-1043</h1>
+<span class="font-metadata-label text-metadata-label uppercase px-2 py-1 bg-surface-container-high rounded-sm border border-hairline tracking-widest mt-1">PACKED</span>
+</div>
+<div class="hidden md:flex gap-4 items-center">
+<button class="font-metadata-label text-metadata-label uppercase tracking-widest hover:opacity-70 transition-opacity flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">print</span> Print
+                </button>
+<button class="font-metadata-label text-metadata-label uppercase tracking-widest hover:opacity-70 transition-opacity flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">edit</span> Edit
+                </button>
+</div>
+</header>
+<!-- Main Layout: Two Columns -->
+<div class="flex flex-col lg:flex-row gap-gutter lg:gap-16 pt-unit">
+<!-- Left Column (65%) -->
+<div class="w-full lg:w-[65%] flex flex-col gap-12">
+<!-- DELIVERY SECTION -->
+<section>
+<h2 class="font-metadata-label text-metadata-label uppercase tracking-widest mb-6">Delivery Information</h2>
+<ul class="flex flex-col border-t border-hairline">
+<li class="flex flex-col sm:flex-row py-4 border-b border-hairline gap-2 sm:gap-0">
+<span class="w-full sm:w-1/3 font-metadata-label text-metadata-label text-muted uppercase tracking-widest pt-1">Name</span>
+<span class="w-full sm:w-2/3 font-body-base text-body-base">Kofi Mensah</span>
+</li>
+<li class="flex flex-col sm:flex-row py-4 border-b border-hairline gap-2 sm:gap-0">
+<span class="w-full sm:w-1/3 font-metadata-label text-metadata-label text-muted uppercase tracking-widest pt-1">Phone</span>
+<span class="w-full sm:w-2/3 font-data-mono text-data-mono">054 123 4567</span>
+</li>
+<li class="flex flex-col sm:flex-row py-4 border-b border-hairline gap-2 sm:gap-0">
+<span class="w-full sm:w-1/3 font-metadata-label text-metadata-label text-muted uppercase tracking-widest pt-1">Address</span>
+<span class="w-full sm:w-2/3 font-body-base text-body-base">12 Osu Badu St, Accra Central</span>
+</li>
+<li class="flex flex-col sm:flex-row py-4 border-b border-hairline gap-2 sm:gap-0">
+<span class="w-full sm:w-1/3 font-metadata-label text-metadata-label text-muted uppercase tracking-widest pt-1">Zone</span>
+<span class="w-full sm:w-2/3 font-body-base text-body-base">Accra Central</span>
+</li>
+<li class="flex flex-col sm:flex-row py-4 border-b border-hairline gap-2 sm:gap-0">
+<span class="w-full sm:w-1/3 font-metadata-label text-metadata-label text-muted uppercase tracking-widest pt-1">Placed</span>
+<span class="w-full sm:w-2/3 font-body-base text-body-base uppercase">12 OCT 2023 · 14:22</span>
+</li>
+</ul>
+</section>
+<!-- ITEMS SECTION -->
+<section>
+<h2 class="font-metadata-label text-metadata-label uppercase tracking-widest mb-6 flex justify-between">
+<span>Items</span>
+<span class="font-data-mono normal-case tracking-normal">2 Items</span>
+</h2>
+<div class="flex flex-col border-t border-hairline">
+<!-- Item Row 1 -->
+<div class="flex py-6 border-b border-hairline gap-6 items-start">
+<div class="w-24 shrink-0 bg-image-plate aspect-[3/4]">
+<img class="w-full h-full object-cover grayscale mix-blend-multiply" data-alt="A meticulously lit, high-end editorial product shot of a vintage Carhartt canvas work jacket, flat laid against a pure white background. The texture of the aged canvas is highly detailed. Light mode aesthetic, minimalist composition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGLd8zHw0Nb3avMfdFI01KUy7wrMny6fQlPW8c09Rv_CFXyTNR6EBH0qfCWtNMd5zNEriCk8FwzF8ub-kaXR7vfb6pwkB7Mepwuv8IPUfqP1OTRaLU-060NJTww1Z9JslVbFBYmsJBU4s0KEHvmm-jQGN4_WJCnQ1Ppc4Mj1rbTt1SgfY20_fYw17UMWrxYJdHr4Upqj_0HJe81ei4N1vow3tjy-F4QIi_l6uI2Co5qPc5z1JLCGQcMQ"/>
+</div>
+<div class="flex-grow flex flex-col gap-1">
+<h3 class="font-body-base text-body-base text-primary">Vintage Canvas Work Jacket</h3>
+<p class="font-metadata-label text-metadata-label text-muted uppercase tracking-widest">CARHARTT · L · ARCHIVAL</p>
+</div>
+<div class="flex flex-col items-end gap-2 shrink-0">
+<span class="font-data-mono text-data-mono">GH₵ 850.00</span>
+<span class="font-data-mono text-data-mono text-muted text-sm">Qty: 1</span>
+</div>
+</div>
+<!-- Item Row 2 (Added to demonstrate picking list format) -->
+<div class="flex py-6 border-b border-hairline gap-6 items-start">
+<div class="w-24 shrink-0 bg-image-plate aspect-[3/4]">
+<img class="w-full h-full object-cover grayscale mix-blend-multiply" data-alt="A meticulously lit, high-end editorial product shot of a heavy cotton white t-shirt, flat laid against a pure white background. The drape of the fabric is highly detailed. Light mode aesthetic, minimalist composition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAeBvPsve0ZolixgHyw3P8i1Svs3MuJF-eaKLGAHCUMMSAUYtugFnJrQ2LU0vUe5KR9ARbU8WfmptGxV_Rfo9ZM3MiF23fV6MAbJ2JSw60TrOXlRdVD6SRsuJEAHMf5FedCDlrC1obkyzhl2PWt5JVC1YrqWOBoqiiUmErIhU8NqSJUvAc7CFx8x7sDk3DZh4WHlPgGbcz0f-yYkjHH7YF9Eu_0TDnN_16Jw8L50oy94y55dJpdSfgQIA"/>
+</div>
+<div class="flex-grow flex flex-col gap-1">
+<h3 class="font-body-base text-body-base text-primary">Heavyweight Archive Tee</h3>
+<p class="font-metadata-label text-metadata-label text-muted uppercase tracking-widest">ARCHIVE 233 · M · ESSENTIALS</p>
+</div>
+<div class="flex flex-col items-end gap-2 shrink-0">
+<span class="font-data-mono text-data-mono">GH₵ 40.00</span>
+<span class="font-data-mono text-data-mono text-muted text-sm">Qty: 1</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (35%) -->
+<div class="w-full lg:w-[35%]">
+<div class="sticky top-margin-desktop flex flex-col gap-12">
+<!-- ORDER SUMMARY -->
+<section class="bg-surface-container-low p-6 border border-hairline">
+<h2 class="font-metadata-label text-metadata-label uppercase tracking-widest mb-6">Order Summary</h2>
+<ul class="flex flex-col gap-4 font-data-mono text-data-mono mb-6">
+<li class="flex justify-between">
+<span class="text-on-surface-variant">Subtotal</span>
+<span>GH₵ 890.00</span>
+</li>
+<li class="flex justify-between">
+<span class="text-on-surface-variant">Delivery fee</span>
+<span>GH₵ 40.00</span>
+</li>
+<li class="flex justify-between pt-4 border-t border-hairline">
+<span>Total</span>
+<span>GH₵ 930.00</span>
+</li>
+</ul>
+<div class="pt-4 border-t border-hairline flex justify-between items-center">
+<span class="font-metadata-label text-metadata-label uppercase tracking-widest">Payment</span>
+<span class="font-metadata-label text-metadata-label uppercase tracking-widest text-primary flex items-center gap-2">
+                                Mobile Money <span class="w-1.5 h-1.5 bg-primary rounded-full inline-block"></span> PAID
+                            </span>
+</div>
+</section>
+<!-- STATUS TIMELINE -->
+<section>
+<h2 class="font-metadata-label text-metadata-label uppercase tracking-widest mb-6">Status</h2>
+<div class="flex flex-wrap items-center gap-x-2 gap-y-4 font-metadata-label text-metadata-label uppercase tracking-widest">
+<span class="text-primary">PENDING</span>
+<span class="material-symbols-outlined text-xs text-muted">arrow_forward</span>
+<span class="text-primary">CONFIRMED</span>
+<span class="material-symbols-outlined text-xs text-muted">arrow_forward</span>
+<span class="text-primary border-b border-primary pb-[1px]">PACKED</span>
+<span class="material-symbols-outlined text-xs text-muted">arrow_forward</span>
+<span class="text-muted">OUT FOR DELIVERY</span>
+<span class="material-symbols-outlined text-xs text-muted">arrow_forward</span>
+<span class="text-muted">DELIVERED</span>
+</div>
+</section>
+<!-- PRIMARY ACTION -->
+<button class="w-full bg-primary text-on-primary font-metadata-label text-metadata-label uppercase tracking-widest py-4 rounded-sm hover:opacity-90 transition-opacity flex justify-center items-center gap-2 mt-4">
+                        MARK AS OUT FOR DELIVERY
+                        <span class="material-symbols-outlined text-sm">local_shipping</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>
