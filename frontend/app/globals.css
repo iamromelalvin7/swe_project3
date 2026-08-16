@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  /* Matches the design's global input treatment: no box, a single rule
+     underneath, ink on focus. */
+  .field-input {
+    @apply w-full border-0 border-b border-rule bg-transparent py-2.5 text-[15px] outline-none focus:border-ink;
+  }
+}

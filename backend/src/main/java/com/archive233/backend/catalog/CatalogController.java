@@ -1,0 +1,23 @@
+package com.archive233.backend.catalog;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.archive233.backend.catalog.dto.CatalogFilterOptionsDto;
+
+@RestController
+@RequestMapping("/api/catalog")
+public class CatalogController {
+
+    private final CatalogService catalogService;
+
+    public CatalogController(CatalogService catalogService) {
+        this.catalogService = catalogService;
+    }
+
+    @GetMapping("/filters")
+    public CatalogFilterOptionsDto filters() {
+        return catalogService.filterOptions();
+    }
+}

@@ -1,5 +1,185 @@
 # Build Log
 
+## Phase 2 (continued) — Frontend
+
+### 2.13 — Register, login, token persistence, logout
+- Rebuilt `tailwind.config.ts` and `app/layout.tsx` with the corrected
+  tokens/fonts (see the design-source correction above): `ink`/`cream`/
+  `grey`/`rule`/`signal`/`sold`/`skeleton` colors, Archivo/IBM Plex Mono/
+  Instrument Serif via `next/font/google`.
+- `lib/api.ts` (fetch wrapper parsing the one error contract into
+  `ApiRequestError`), `lib/auth.tsx` (`localStorage`-backed auth context —
+  FR-A9 explicitly says "clearing the token client-side," which settles
+  the storage question), `lib/types.ts`, `lib/money.ts` (`formatMoney` —
+  NFR-U7, pesewas never shown raw).
+- `components/Header.tsx`, `components/AuthForm.tsx` (shared by `/login`
+  and `/register`, mirroring the design's single toggling screen but as
+  two routes for direct linking), `components/AddToCartButton.tsx`
+  (FR-C4 only — logged-out click redirects to login and back; a signed-in
+  click is deliberately inert, since `POST /api/cart/items` is Phase 3).
+
+### 2.14 — Catalog grid
+- `components/FilterBar.tsx`: category/size/brand/condition/price/sort,
+  all reflected in the URL query string (FR-B3), reading option lists
+  from `GET /api/catalog/filters`.
+- `components/ProductGrid.tsx` + `components/ProductCard.tsx`: "Load
+  more" pagination (per the project owner's choice over numbered pages,
+  since the design has no pagination control at all — flagged before
+  building). `app/products/loading.tsx` (skeleton) and
+  `app/products/error.tsx` (matches the design's error-state screen) —
+  NFR-U2's three list states.
+
+### 2.15–2.16 — Product detail and availability states
+- `components/ProductGallery.tsx` (thumbnail strip + hero, client-side
+  active-image state), `app/products/[id]/page.tsx`,
+  `app/products/[id]/not-found.tsx`.
+- Availability rendering ported from the design's own `liveState`/
+  `stateLine` logic, driven by the real `AvailabilityStatus` the backend
+  computes: available ("N available" / "1 left"), reserved, sold out
+  (desaturated, struck-through price, red ribbon) — verified live with a
+  real sold-out product, screenshot matches the design pixel-for-pixel.
+
+### Verification
+Ran the app for real — backend on :8080, frontend dev server on :3001
+(port 3000 was held by an unrelated process on the machine, not killed
+without knowing what it was) — and drove it with Playwright (browser
+installed fresh; `chromium-cli` wasn't available). `mvn test`: 4/4,
+confirmed repeatable by running twice back to back. Full admin →
+catalog → detail cycle exercised live, including a real image upload
+(see below) and a real sold-out product to check FR-B8's exact visual
+treatment.
+
+**Three real bugs found and fixed by actually running the app, not just
+reading the code:**
+
+1. **Category filter silently did nothing.** Clicking a filter updated
+   the URL correctly but the grid never changed. First suspected the
+   Next.js Router Cache and added `next.config.mjs`
+   `experimental.staleTimes.dynamic = 0` — that didn't fix it, and in
+   hindsight wasn't the real cause (though it's harmless to keep for a
+   fully dynamic, `cache: "no-store"` page). The actual bug: `ProductGrid`
+   seeded its list with `useState(initial)`, and since the component
+   never unmounted across client-side filter navigations, React kept the
+   *first* render's data forever, ignoring every fresh `initial` prop
+   from the server. Fixed by giving it `key={params.toString()}` in
+   `app/products/page.tsx` so it remounts — and resets its state — on
+   every filter/sort/search change.
+2. **Image upload 400'd** on a hand-crafted minimal test PNG —
+   Thumbnailator threw on the degenerate 2×2 image. Not a real bug (a
+   normal photograph uploads fine, verified with a real 200×200 PNG,
+   both derivatives landed in Supabase Storage and are publicly
+   fetchable, well under NFR-P3's size budgets), but added proper
+   exception logging in `ProductImageService` since the original code
+   silently swallowed the real cause.
+3. **Register failed with a CORS error** in an actual browser (curl
+   never would have caught this — CORS is browser-enforced). The dev
+   server grabbed port 3001 because something unrelated already held
+   3000, but `CORS_ALLOWED_ORIGINS` only listed 3000. Added 3001
+   alongside it in `backend/.env` — confirmed with the project owner
+   before editing, same as prior `.env` changes.
+
+Root domain redirect updated: `app/page.tsx` now redirects `/` →
+`/products` (was the Phase 1 health-check proof page, superseded now
+that the real storefront exists).
+
+## Phase 2 — Auth and catalog
+
+**Design-source correction (before any UI work):** Phase 1's `tailwind.config.ts`
+was built from the wrong file — `docs/design/.../_ds/industry-.../` is an
+unrelated, unused design system left over in the same Claude Design project.
+The actual approved design is `docs/design/app-refinement-feedback/project/
+Archive 233.dc.html`, a complete interactive prototype with its own
+self-contained palette (ink `#12100E`, cream `#FAF9F6`, grey `#8C877D`, rule
+`#E4E1DA`, signal `#B23A20`) and type system (Archivo / IBM Plex Mono /
+Instrument Serif). Confirmed with the project owner before rebuilding tokens.
+
+### 2.1–2.5 — User, auth, error contract
+- `user/` package: `User` entity (exact match to `users`), `Role` enum,
+  `UserRepository`. `BCryptPasswordEncoder(10)` bean in `SecurityConfig`.
+- `error/` package: `ApiException` + three concrete subclasses
+  (`DuplicateEmailException` 409, `NotFoundException` 404,
+  `InvalidCredentialsException` 401), `ApiError`/`ErrorResponse` records,
+  `GlobalExceptionHandler` (`@RestControllerAdvice`) covering bean
+  validation, type-mismatch path variables, oversized uploads, Spring
+  Security's `AccessDeniedException`, and a sanitized catch-all.
+- `auth/` package: `JwtService` (io.jsonwebtoken 0.12.6 — new dependency,
+  HMAC-signed, secret/expiry from env), `JwtAuthenticationFilter`,
+  `RegisterRequest`/`LoginRequest`/`AuthResponse` DTOs, `AuthService`,
+  `AuthController` (`POST /api/auth/register`, `POST /api/auth/login`).
+- `SecurityConfig` rewritten: stateless, `@EnableMethodSecurity`, JWT filter,
+  public routes permitted by URL, everything else `authenticated()` with
+  role gates via `@PreAuthorize` on individual controller methods (hard
+  rule 9 — per resource, not per route).
+
+**Deviation found and fixed:** an admin route hit with **no** token returned
+a bare, bodyless 403 — Spring Security's `AuthorizationFilter` rejects
+unauthenticated requests before they ever reach Spring MVC, so
+`GlobalExceptionHandler` never saw it. Added `RestAuthenticationEntryPoint`
+(401, code `UNAUTHENTICATED`) and `RestAccessDeniedHandler` (403, code
+`FORBIDDEN`) wired into the filter chain's `exceptionHandling()`, so every
+401/403 — filter-level or `@PreAuthorize`-level — now returns the one error
+contract.
+
+### 2.6–2.9 — Catalog read path
+- `catalog/` package: `SizeGroup`/`ProductCondition`/`ProductStatus`/
+  `AvailabilityStatus` enums, `Category`/`SizeOption`/`Product`/
+  `ProductImage` entities (exact match to schema), `ProductAvailability` —
+  a read-only `@Immutable` mapping of the `product_availability` view.
+- `ProductRepository.search(...)`: one JPQL query joins category, the
+  primary image (`ON pi.position = 0`, not a fetch-joined collection —
+  avoids the classic pagination/fetch-join multiplication problem) and the
+  availability view; Spring Data supplies the count query only when
+  needed. Verified live with `spring.jpa.show-sql=true`: exactly one
+  `Hibernate:` statement per listing call regardless of row count — no N+1
+  (NFR-P5).
+- `ProductController` (`GET /api/products`, `GET /api/products/{id}`),
+  `CatalogController` (`GET /api/catalog/filters` — categories, distinct
+  published brands/sizes, all condition values) to support the frontend
+  filter bar; not a named objective but required by 2.14.
+
+**Deviation found and fixed:** the catalog query 500'd with `ERROR:
+function lower(bytea) does not exist` whenever the free-text search
+parameter was null — a PgJDBC quirk where a null-valued bind parameter used
+only inside a function call (`lower(?)`) can't be type-inferred and
+defaults to `bytea`. Fixed with an explicit `cast(:query as string)`.
+
+### 2.10–2.11 — Admin writes
+- `ProductRequest` DTO, `AdminProductController` (`@PreAuthorize
+  hasRole('ADMIN')`): create, full update, `PATCH .../archive`. No delete
+  endpoint exists — hard-delete is structurally impossible via this API.
+  Server-side validates the category exists and the size label is one of
+  that category's actual `size_options` (real enforcement of FR-G8, not
+  just a frontend dropdown).
+- `storage/` package: `ImageMagicBytes` (JPEG/PNG/WebP signature check —
+  FR-G6, ignores declared content-type entirely), `SupabaseStorageClient`
+  (REST upload via `RestClient`, service-role key server-side only).
+  `ProductImageService`: caps at 6 images/product, derives exactly two
+  JPEG derivatives per upload (1600px display, 400px thumbnail) via
+  `net.coobird:thumbnailator` (new dependency) — re-encoding through it
+  also strips EXIF (NFR-S11) after applying orientation correction, and
+  discards the original entirely (FR-G7).
+
+### 2.12 — Seed data
+- `db/02_seed.sql`: 5 categories, 18 size options, 5 delivery zones, one
+  admin user. Proposed to the project owner before running; applied to
+  both local Docker Postgres and Supabase. Admin credentials shared
+  out-of-band, not committed.
+
+### Verification
+- `mvn test`: 4/4 passing (register, duplicate-email 409, validation 400,
+  wrong-password 401), run twice back-to-back to confirm no test
+  pollution — an earlier draft used `TestTransaction.flagForCommit()` to
+  force a real commit so a "second" request would see the first, which
+  actually leaked two rows into the live Supabase `users` table and broke
+  the *next* run. Fixed by relying on Hibernate's auto-flush-before-query
+  within the single enclosing `@Transactional` test transaction instead;
+  cleaned up the two leaked rows manually.
+- Live curl transcripts against the locally-running app (Supabase-backed):
+  register, duplicate 409, login, wrong-password 401, admin route with no
+  token (401), admin route with a customer token (403), full admin
+  create → publish → public-listing → archive → 404 cycle. All match the
+  one error contract.
+
 ## Phase 1 — Foundation, deployed
 
 ### 1.1–1.2 — Docker Compose Postgres
