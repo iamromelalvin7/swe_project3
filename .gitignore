@@ -33,3 +33,8 @@ Thumbs.db
 # Supabase CLI local cache
 supabase/.temp/
 supabase/.branches/
+
+# Source photographs supplied for Phase 4 seeding — not ours to redistribute
+# via the repo (see BUILD_LOG.md, Phase 4 4.1 entry). Already uploaded through
+# the real image pipeline to Supabase Storage for the products that use them.
+clothes/

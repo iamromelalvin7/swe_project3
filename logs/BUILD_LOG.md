@@ -1,5 +1,172 @@
 # Build Log
 
+## Phase 4 — 4.2, historical order seeding
+
+30+ orders across every status, spread over dates, per the objective's
+exact wording. Written as `db/03_seed_orders.sql` — a data seed, not a
+schema change, but still a direct write to the production database
+(bypassing the API entirely, since `placeOrder` always stamps
+`created_at = now()` and orders are immutable by hard rule 5, so there is
+no API path to backdate one). Shown to the project owner and run only
+after explicit approval, same as any other production-database write in
+this project.
+
+**Mechanics, kept as close to "real" as the constraint allows:**
+- 7 fictional Ghanaian customer accounts registered through the actual
+  `POST /api/auth/register` endpoint (real password hashing, real
+  validation) rather than hand-inserted into `users` — a raw INSERT there
+  would either need a hand-rolled BCrypt hash or bypass hashing entirely,
+  neither of which is worth it when registration is free to call.
+- 12 "history-only" products created through the real admin product API
+  and immediately archived (same reasoning as `Concurrency Proof Jeans`
+  in Phase 3's checkpoint — hard rule 6 says archive, not delete). Kept
+  deliberately separate from the 15 live showcase products from 4.1:
+  `order_items` snapshots every display field it needs (title, size,
+  price) and hard rule 5 says a past order is never re-joined to
+  `products`, so nothing about a historical order actually depends on
+  the referenced product's live state — but decrementing *live showcase*
+  stock to fabricate "past sales" would have emptied the very catalog
+  4.1 just seeded for browsing/testing. Using dedicated archived products
+  sidesteps that trade-off entirely: real schema-valid FK targets that
+  never appear in the live catalog.
+- 32 `orders` rows, each with a matching `order_status_history` chain
+  (`NULL→PENDING` changed by the customer, then one row per admin-driven
+  step up to its final status — mirrors `OrderService.placeOrder`'s and
+  `.updateStatus`'s own history-writing exactly) and one `payments` row.
+  Distribution: 14 DELIVERED, 4 OUT_FOR_DELIVERY-through-CONFIRMED each,
+  4 PENDING, 4 CANCELLED — placed between 58 days ago and today.
+  CANCELLED orders stop at `PENDING→CANCELLED` (no further steps) and
+  carry a payment status that makes sense for how they'd actually die:
+  `PENDING` for cash-on-delivery (never charged) or `FAILED` for the
+  Paystack ones (payment didn't go through, hence cancelled) — never
+  `PAID`+`CANCELLED` together, which the real system would never produce
+  either.
+
+Generating the SQL text (a script that only builds a file, touches no
+database) and then executing it against production were each individually
+blocked by the environment's action classifier — the script's own content
+is dense with raw `INSERT INTO orders/payments` text, which is exactly
+the shape of action the classifier is right to pause on even though this
+particular run only ever produced/ran a reviewed, parameterized-by-hand
+SQL file. Stopped and explained both times rather than retrying through a
+different tool to route around the block; the project owner reviewed the
+plan and approved each step (generate, then separately execute) before it
+ran.
+
+**Verified live** against the deployed admin API and UI: `GET
+/api/admin/orders` paginated across all pages sums to 40 total orders (32
+seeded + 8 pre-existing from earlier phases) with the full status
+distribution present — 8 PENDING, 4 CONFIRMED, 4 PACKED, 4
+OUT_FOR_DELIVERY, 14 DELIVERED, 6 CANCELLED. The live `/admin/orders`
+page renders all of it correctly: real customer names/phones/zones,
+correct GH₵ totals, status filter tabs, mixed payment states, zero
+console errors.
+
+## Phase 4 — 4.1, product seeding (partial, real photos only)
+
+**Photo sourcing, flagged before doing anything.** The project owner
+supplied 15 photographs (`clothes/`) for real product listings. Several —
+particularly `adidas-samba.jpg` — read as polished studio/marketing
+photography rather than photos of a physically-owned item, and the owner
+confirmed they're Pinterest images, not their own photography or
+something they hold rights to. Flagged this directly: uploading them to
+production Supabase Storage as if they were this shop's own product
+photography isn't something to do silently. The owner explicitly asked to
+proceed anyway. Recorded here rather than treated as resolved-and-forgotten:
+this is acceptable only in the context of a non-commercial academic
+capstone project where Paystack is in test mode and no real transaction or
+real business is involved — it would not be an acceptable basis for an
+actual live storefront.
+
+**Objective 4.1 is only partially met.** The PRD asks for 40 products;
+only 15 real photographs exist, so only 15 real-photo products were
+seeded (14 net new + one existing test fixture repurposed), per the
+project owner's own earlier decision to seed fewer products rather than
+pad the catalog with unrelated stock imagery. This is the risk #5 gap
+("thin seed data") materializing for real — flagged here rather than
+silently marking 4.1 complete. Remaining ~25 products need either more
+real photographs or an explicit decision to accept a smaller catalog.
+
+**Real bug found while seeding: WebP upload passes validation but fails
+processing.** `ImageMagicBytes` (FR-G6) correctly identifies WebP by its
+RIFF/WEBP signature and accepts it, but `ProductImageService`'s
+`Thumbnails.of(...)` call (Thumbnailator, backed by Java's built-in
+`ImageIO`) has no WebP decoder registered by default — no such plugin is
+in `pom.xml`. Uploading `carhartt-vintage-jacket.webp` as-is 400'd with
+`{"code":"VALIDATION_ERROR","message":"Could not process image."}` even
+though the file is a perfectly valid WebP that passed the magic-byte
+check. This is a genuine gap between what the endpoint's own validation
+advertises as acceptable and what it can actually process — logged here,
+not fixed, since adding WebP decode support is out of Phase 4's scope and
+wasn't asked for. Worked around it the same way as the one `.avif` source
+photo (Nike Air Max — `.avif` isn't in the accepted signature list at
+all, by design): re-encoded both `.webp` files to JPEG locally (via
+`sharp`, outside the app) before uploading through the real pipeline.
+Every uploaded image still went through the app's actual magic-byte
+check, thumbnail derivation, and Supabase Storage upload unmodified — only
+the source container format was converted ahead of time.
+
+**Seeding mechanics.** Used the existing, already-verified admin API
+(`POST /api/admin/products`, `POST .../{id}/images`) directly against
+production — not a new SQL script, since this is exactly what that API
+was built for. 13 new products created; 2 pre-existing test-fixture
+products reused rather than duplicated (`Air Max 97 Silver Bullet` — the
+supplied `air-max97.avif` is literally that same Nike colourway, so it
+got the fixture's ID and a restock rather than a near-duplicate listing;
+`Wool Overshirt Sold Out Test` — renamed to `Pendleton Trail Flannel
+Overshirt` and given the Pendleton photo, since keeping a product titled
+"...Sold Out Test" live in the seeded catalog would be dishonest); one
+QA-only fixture (`Concurrency Proof Jeans`, from the Phase 3 checkpoint's
+concurrency proof) archived via the existing archive endpoint — its name
+alone reveals it as a test fixture, not real inventory, and hard rule 6
+means archiving rather than deleting is the correct way to retire it.
+
+Verified live: `GET /api/products` returns 16 items (15 seeded + the
+pre-existing `Vintage Detroit Jacket`), the archived fixture 404s on
+direct fetch and is absent from the list, and the deployed catalog page
+renders all 16 correctly (real photos, "N LEFT" states, correct GH₵
+formatting, the one legitimately sold-out item showing its ribbon) with
+zero console errors.
+
+## Phase 3 — Checkpoint evidence gathered live against production
+
+Both Phase 3 commits (`e071680` backend, `699acb7` frontend) were pushed;
+the project owner manually redeployed both Render (with the new
+`FRONTEND_URL` env var) and Vercel. Before compiling Checkpoint 3,
+re-ran every required proof directly against the deployed URLs
+(`https://archive233.vercel.app`, `https://archive233-backend.onrender.com`)
+rather than reusing the local/dev-Supabase run recorded further down this
+log — a passing local run doesn't confirm the CORS fix, the `FRONTEND_URL`
+wiring, or the pooler connection are actually correct in the deployed
+environment.
+
+- `mvn test`: 5/5, re-run clean.
+- Full customer flow live: login → product detail (live availability
+  states, including a genuinely sold-out item showing the derived
+  `SOLD OUT` state correctly) → add to cart → cart page with a real
+  ticking per-line countdown → checkout (cash on delivery, delivery
+  fields, zone, fee calculation) → `201` order confirmation page → order
+  history listing it alongside prior test orders → cart badge correctly
+  reset to `0`. Zero browser console errors throughout.
+- Admin flow live: admin login → `/admin/orders` list → order detail
+  (full picking list, status stepper) → an illegal transition
+  (`PENDING → DELIVERED`) rejected `409 ILLEGAL_TRANSITION` via direct
+  API call → a legal transition (`PENDING → CONFIRMED`) `200`, reflected
+  in the browser detail view on reload.
+- **Concurrency proof, re-run against production** (the version in this
+  log below was local/dev-Supabase, not the deployed API): reset
+  `Concurrency Proof Jeans` to `stock_quantity = 1` via the admin update
+  endpoint, claimed the sole hold as the customer, then fired two
+  `POST https://archive233-backend.onrender.com/api/checkout` calls truly
+  simultaneously (backgrounded curl, `wait`ed together). Result: one
+  `201`, one `409 OUT_OF_STOCK`, final `availableQuantity: 0` /
+  `status: SOLD_OUT` confirmed via `GET /api/products/{id}` immediately
+  after.
+
+No new bugs found in this pass — every fix made earlier in Phase 3 (the
+CORS rewrite, the `AdminOrderSummaryDto` addition, the Specification-based
+admin search) held up unchanged in production.
+
 ## Phase 3 (continued) — Frontend
 
 ### 3.17–3.19 — Cart, checkout, customer order history
