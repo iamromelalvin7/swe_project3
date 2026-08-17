@@ -75,9 +75,9 @@ function AccountInner() {
     return (
       <main>
         <Header />
-        <div className="max-w-[560px] px-14 pt-11 pb-[120px] max-[640px]:px-5 max-[640px]:pt-7">
-          <h1 className="mb-6 font-serif text-[56px] max-[640px]:text-[38px]">Account</h1>
-          <div className="pt-8">
+        <div className="flex min-h-[calc(100vh-76px)] flex-col px-14 max-[640px]:px-5 max-[640px]:min-h-[calc(100vh-60px)]">
+          <h1 className="pt-11 font-serif text-[56px] max-[640px]:pt-7 max-[640px]:text-[38px]">Account</h1>
+          <div className="flex flex-1 flex-col items-center justify-center pb-24 text-center">
             <div className="mb-6 text-[15px] text-grey">You are signed out.</div>
             <Link
               href="/login?redirect=/account"

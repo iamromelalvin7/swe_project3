@@ -1,5 +1,69 @@
 # Build Log
 
+## UI corrections requested directly by the project owner
+
+Five specific fixes, reported after actually using the deployed nav
+rework:
+
+1. **Two search icons on the catalog page.** Header's search icon
+   (added when matching the design's `isStore` header) and FilterBar's
+   own search toggle both rendered simultaneously on `/products` —
+   confusing duplication. Removed Header's entirely, per direct
+   instruction; FilterBar's stays as the one true search entry point.
+   (The dead `?search=1` deep-link handling left in `FilterBar` is
+   harmless — a manually-typed link still opens search — so it wasn't
+   ripped out along with the trigger.)
+2. **Signed-out `/account` read as "squeezed in a corner."** The
+   content (`You are signed out.` + a Sign in button) sat flush at the
+   top-left of an otherwise empty page. Changed to vertically *and*
+   horizontally center within the space below the heading
+   (`flex min-h-[calc(100vh-76px)]` wrapper) rather than just adding
+   padding — makes it read as an intentional state, not leftover
+   whitespace.
+3. **Admin sessions should only ever show Dashboard/Products/Orders** —
+   no cart, no search, no customer account icon; those are shopper
+   concepts, irrelevant to an operator. `Header.tsx` now hides the
+   cart/account icons entirely when `user.role === "ADMIN"` (search was
+   already removed globally by fix 1). Since the account icon was the
+   only path to sign out, moved `Sign out` into `AdminShell`'s own
+   sidebar instead of leaving admins with no way to log out.
+4. **New-product drop zone didn't actually support drag-and-drop** —
+   it was a `<label>`-wrapped file input with no `onDragOver`/`onDrop`
+   handlers at all, despite looking like a drop zone. Added real HTML5
+   DnD handling (files dropped go through the same `onFiles` path as a
+   click-selected file) plus a paperclip/attachment SVG icon above
+   "Drop photos" so the click target reads as an upload affordance, not
+   just text.
+5. **"Some categories don't allow for me to give the correct size."**
+   The Size field was free text with just a placeholder hint — nothing
+   stopped an admin from typing a value that doesn't match that
+   category's actual `size_options` (footwear categories need "US 9",
+   not "42"; waist categories need "32X32", not "L"), and the backend
+   correctly rejects anything that doesn't match, per hard rule
+   server-side validation. The admin had no way to see what the valid
+   options actually were. Fixed properly rather than just adding
+   better hint text: extended `GET /api/catalog/filters` with
+   `sizeOptionsByGroup` — every `SizeOption` row grouped by
+   `SizeGroup`, not the previous flat `sizes` list (which only reflects
+   sizes some *published* product happens to already use — wrong source
+   for "what sizes can I enter"). `CatalogService`/`SizeOptionRepository`
+   already existed with exactly the query needed
+   (`findBySizeGroupOrderByPositionAsc`); this was a matter of exposing
+   data that was already there, not new backend logic. The Size field
+   is now a `<select>` scoped to the selected category's `sizeGroup`
+   (disabled with a "Pick a category first" placeholder until one is
+   chosen), so it's now structurally impossible to submit an invalid
+   size for whichever category is selected.
+
+### Verified
+`mvn test` 4/5 (same pre-existing unrelated failure), `npx tsc --noEmit`
+and `next build` both clean. Local Playwright pass: exactly one search
+icon on the catalog page; admin header confirmed to render zero
+cart/search/account icons; admin sidebar `Sign out` confirmed working
+(redirects to login); Size options confirmed category-correct — Footwear
+→ `US 8/9/10/11`, Denim → the full waist list — with no cross-category
+leakage. Zero console errors.
+
 ## Phase 4 — 4.6, Lighthouse
 
 Ran `lighthouse` against the live production URL (`archive233.vercel.app`)

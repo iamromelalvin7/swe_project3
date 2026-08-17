@@ -29,6 +29,7 @@ export default function NewProductPage() {
   const [options, setOptions] = useState<CatalogFilterOptions | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [files, setFiles] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<"draft" | "publish" | "publishAnother" | null>(null);
@@ -51,6 +52,9 @@ export default function NewProductPage() {
     if (!list) return;
     setFiles((prev) => [...prev, ...Array.from(list)].slice(0, 6));
   }
+
+  const selectedSizeGroup = options?.categories.find((c) => c.id === form.categoryId)?.sizeGroup ?? null;
+  const sizeOptions = selectedSizeGroup ? options?.sizeOptionsByGroup[selectedSizeGroup] ?? [] : [];
 
   async function submit(status: "DRAFT" | "PUBLISHED", andAnother: boolean) {
     if (!user) return;
@@ -122,9 +126,26 @@ export default function NewProductPage() {
 
         <div className="grid grid-cols-[35%_1fr] items-start gap-14 max-[900px]:grid-cols-1">
           <div>
-            <div className="flex aspect-square flex-col items-center justify-center gap-2 rounded-[4px] border border-dashed border-rule">
-              <label className="cursor-pointer text-[15px] hover:text-grey">
-                Drop photos
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                onFiles(e.dataTransfer.files);
+              }}
+              className={`flex aspect-square flex-col items-center justify-center gap-3 rounded-[4px] border border-dashed transition-colors ${
+                dragging ? "border-ink bg-hover-light" : "border-rule"
+              }`}
+            >
+              <label className="flex cursor-pointer flex-col items-center gap-3 hover:text-grey">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <path d="M14.5 8.5 8.4 14.6a3 3 0 0 1-4.24-4.24l7.07-7.07a2 2 0 0 1 2.83 2.83L7.4 12.76a1 1 0 0 1-1.41-1.41L12.02 5.3" />
+                </svg>
+                <span className="text-[15px]">Drop photos</span>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -173,7 +194,14 @@ export default function NewProductPage() {
                 />
               </FormField>
               <FormField label="Category" span="col-span-2" error={errors.categoryId}>
-                <select className="field-input" value={form.categoryId} onChange={(e) => update("categoryId", e.target.value)}>
+                <select
+                  className="field-input"
+                  value={form.categoryId}
+                  onChange={(e) => {
+                    update("categoryId", e.target.value);
+                    update("sizeLabel", "");
+                  }}
+                >
                   <option value="">Select</option>
                   {options?.categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -186,7 +214,19 @@ export default function NewProductPage() {
                 <input className="field-input" value={form.brand} onChange={(e) => update("brand", e.target.value)} placeholder="Carhartt" />
               </FormField>
               <FormField label="Size" span="col-span-2" error={errors.sizeLabel}>
-                <input className="field-input" value={form.sizeLabel} onChange={(e) => update("sizeLabel", e.target.value)} placeholder="XL" />
+                <select
+                  className="field-input"
+                  value={form.sizeLabel}
+                  onChange={(e) => update("sizeLabel", e.target.value)}
+                  disabled={!form.categoryId}
+                >
+                  <option value="">{form.categoryId ? "Select" : "Pick a category first"}</option>
+                  {sizeOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
               </FormField>
               <FormField label="Condition" span="col-span-2" error={errors.condition}>
                 <select className="field-input" value={form.condition} onChange={(e) => update("condition", e.target.value as ProductCondition)}>

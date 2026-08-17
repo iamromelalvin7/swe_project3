@@ -54,6 +54,7 @@ export type CatalogFilterOptions = {
   brands: string[];
   sizes: string[];
   conditions: ProductCondition[];
+  sizeOptionsByGroup: Record<SizeGroup, string[]>;
 };
 
 export type PageResponse<T> = {
