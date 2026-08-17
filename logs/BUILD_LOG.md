@@ -28,7 +28,16 @@ to the catalog grid.
 
 Fixed: swapped to `primaryThumbUrl`, added `fetchPriority="high"` to the
 first 4 cards (a reasonable stand-in for "above the fold" without
-tracking real viewport intersection). **Not fixed, flagged instead**:
+tracking real viewport intersection). Re-ran Lighthouse against
+production after redeploying: mobile Performance 71 → **89**, LCP 7.1s →
+**3.6s**, total page weight 3.98 MB → **651 KiB** (a ~6x reduction).
+LCP is still above the strict 2.5s "good" threshold — the remaining gap
+is Render free-tier TTFB and Supabase image CDN latency under simulated
+4G, not something a frontend change can close further; this is the
+exact cold-start risk the PRD's own risk table already names, mitigated
+by the cron-job.org ping (objective 4.10, not yet configured). Every
+other category (Accessibility 95, Best Practices 100, SEO 100)
+unaffected and already strong. **Not fixed, flagged instead**:
 `OrderItem`'s snapshotted `image_url` also stores the full-size
 `primaryImageUrl` at checkout time rather than the thumb, so every
 order's small line-item thumbnail (order detail, admin order detail) has
