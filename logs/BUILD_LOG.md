@@ -111,6 +111,17 @@ products created during this verification were archived immediately
 after (same real Supabase database local dev connects to — not a
 separate sandbox).
 
+**Live production verification** after the project owner redeployed
+both Render and Vercel: header icons, the signed-out Account state,
+sign-in, the Details tab (confirmed the phone/address saved during
+local testing had genuinely persisted — same production database),
+the search icon toggle (confirmed working after an initially-too-tight
+test wait gave a false negative), the mobile bottom nav with correct
+active-tab highlighting and content scrolling underneath a `fixed`
+bar, and the admin New product screen all verified directly against
+`archive233.vercel.app` / `archive233-backend.onrender.com`. Zero
+console errors throughout.
+
 ## Real bug: every Paystack payment confirmation was silently failing
 
 Reported by the project owner: every real payment, whether it went
