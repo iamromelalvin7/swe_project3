@@ -1,5 +1,16 @@
 ﻿# Suggestions — logged, not acted on
 
+- **Order-item thumbnails snapshot the full-size image, not the
+  thumbnail.** `OrderService.placeOrder` passes `line.primaryImageUrl()`
+  into `OrderItem`'s snapshotted `image_url`, so the small (~64-80px)
+  item thumbnail shown on order detail and admin order detail pages
+  loads the full 1600px display derivative instead of the 400px thumb —
+  same class of issue fixed in the catalog grid (Phase 4, 4.6), just not
+  measured by that Lighthouse run since it only audited the catalog
+  page. Fixing it means snapshotting `primaryThumbUrl` instead at
+  checkout time; only affects orders placed after the change; found
+  while fixing the catalog grid's identical mistake.
+
 - **A few detail (non-list) pages still don't catch fetch errors** —
   `app/admin/orders/[id]/page.tsx` and `app/checkout/page.tsx`'s
   delivery-zone fetch have no `.catch`, so a failed request leaves them

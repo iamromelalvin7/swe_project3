@@ -24,12 +24,13 @@ export function ProductCard({ product, index }: { product: ProductSummary; index
               "repeating-linear-gradient(135deg, #F4F2ED 0 7px, #FFFFFF 7px 14px)",
           }}
         >
-          {product.primaryImageUrl ? (
+          {product.primaryThumbUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={product.primaryImageUrl}
+              src={product.primaryThumbUrl}
               alt={product.title}
               className="h-full w-full object-cover"
+              fetchPriority={index < 4 ? "high" : "auto"}
             />
           ) : (
             <span className="absolute top-2.5 left-2.5 font-mono text-[11px] text-grey">{index + 1}</span>

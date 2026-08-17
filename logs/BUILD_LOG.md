@@ -1,5 +1,42 @@
 # Build Log
 
+## Phase 4 — 4.6, Lighthouse
+
+Ran `lighthouse` against the live production URL (`archive233.vercel.app`)
+via `npx`, both desktop preset and the default mobile/simulated-4G
+config — the latter is what NFR-P4 ("FCP under 2.5s on simulated 4G")
+actually means.
+
+**First run (before any fix)**: mobile Performance 71, FCP 1.3s (already
+meets NFR-P4), but LCP 7.1s and total page weight ~3.98 MB. Lighthouse's
+own LCP breakdown pinned it precisely: `resourceLoadDelay` 2.3s +
+`resourceLoadDuration` 2.4s dominated the 7.1s, on the catalog grid's
+first product image — and the LCP-discovery audit flagged it as not
+`fetchpriority=high` and not eagerly discoverable.
+
+**Real, pre-existing bug found**: `components/ProductCard.tsx` (built in
+Phase 2) rendered the catalog grid using `product.primaryImageUrl` — the
+full 1600px display derivative — instead of `product.primaryThumbUrl`,
+the 400px thumbnail generated specifically for this purpose per NFR-P3
+("Grid thumbnails at most 60 KB; detail images at most 300 KB"). Every
+catalog grid card, this whole project, has been shipping a display-sized
+image where a thumbnail belongs — directly explains both the heavy page
+weight and the slow LCP under throttling. The product detail page's own
+gallery was already correct (`thumbUrl` for the strip, `url` for the
+hero), and `CartLineRow` already used the thumb too — this was isolated
+to the catalog grid.
+
+Fixed: swapped to `primaryThumbUrl`, added `fetchPriority="high"` to the
+first 4 cards (a reasonable stand-in for "above the fold" without
+tracking real viewport intersection). **Not fixed, flagged instead**:
+`OrderItem`'s snapshotted `image_url` also stores the full-size
+`primaryImageUrl` at checkout time rather than the thumb, so every
+order's small line-item thumbnail (order detail, admin order detail) has
+the same inefficiency — out of scope here since Lighthouse never
+measured those pages and fixing it touches the checkout snapshot path,
+not just a rendering choice; logged to SUGGESTIONS.md instead of
+expanding this fix.
+
 ## Design-fidelity rework: icon nav, bottom tab bar, unified Account, admin New product
 
 The project owner pointed out that the storefront chrome didn't match
