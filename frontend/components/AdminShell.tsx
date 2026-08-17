@@ -5,15 +5,13 @@ import { usePathname } from "next/navigation";
 import { Header } from "@/components/Header";
 
 // Two-column admin layout from the design export (admCols/admSidePad/admNavDir/admPad,
-// lines ~1011-1014 of Archive 233.dc.html). The design's nav lists three items
-// (Dashboard, Products, Orders) but only Dashboard and Orders exist — no admin
-// product-management screen is in scope for any current phase, so "Products" is
-// omitted here rather than linking to a page that doesn't exist. The design's own
-// sidebar wordmark is skipped since the site-wide Header above it already shows
-// "Archive 233" plus sign-out, which the design's static admin prototype has no
-// equivalent for but which is a functional necessity, not a stylistic addition.
+// lines ~1011-1014 of Archive 233.dc.html). The design's own sidebar wordmark is
+// skipped since the site-wide Header above it already shows "Archive 233" plus
+// account access, which the design's static admin prototype has no equivalent for
+// but which is a functional necessity, not a stylistic addition.
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/products/new", label: "Products" },
   { href: "/admin/orders", label: "Orders" },
 ];
 

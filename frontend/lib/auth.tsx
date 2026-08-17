@@ -17,6 +17,7 @@ type AuthContextValue = {
   ready: boolean;
   login: (auth: AuthUser) => void;
   logout: () => void;
+  updateUser: (patch: Partial<Omit<AuthUser, "token" | "id" | "role">>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -47,8 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((patch: Partial<Omit<AuthUser, "token" | "id" | "role">>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, ready, login, logout }}>
+    <AuthContext.Provider value={{ user, ready, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

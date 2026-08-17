@@ -139,6 +139,15 @@ export type CheckoutResponse = {
   authorizationUrl: string | null;
 };
 
+export type UserProfile = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  defaultAddress: string | null;
+  role: "CUSTOMER" | "ADMIN";
+};
+
 export type AdminDashboard = {
   totalRevenuePesewas: number;
   orderCount: number;

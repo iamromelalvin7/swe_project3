@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { apiFetch, authFetch, ApiRequestError } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
-import type { CheckoutResponse, DeliveryZone, PaymentMethod } from "@/lib/types";
+import type { CheckoutResponse, DeliveryZone, PaymentMethod, UserProfile } from "@/lib/types";
 
 export default function CheckoutPage() {
   const { ready, user } = useAuth();
@@ -33,8 +33,22 @@ export default function CheckoutPage() {
     if (user) setName((n) => n || user.fullName);
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    authFetch<UserProfile>("/api/users/me", user.token).then((p) => {
+      setPhone((v) => v || p.phone || "");
+      setAddress((v) => v || p.defaultAddress || "");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  useEffect(() => {
+    if (ready && !user) {
+      router.push("/login?redirect=/checkout");
+    }
+  }, [ready, user, router]);
+
   if (ready && !user) {
-    router.push("/login?redirect=/checkout");
     return null;
   }
 

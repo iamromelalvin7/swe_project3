@@ -1,56 +1,59 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
 export function Header() {
-  const { user, ready, logout } = useAuth();
+  const { user } = useAuth();
   const { count } = useCart();
-  const router = useRouter();
 
   return (
     <header className="flex h-[76px] items-center justify-between border-b border-rule px-14 max-[640px]:h-[60px] max-[640px]:px-5">
       <Link href="/products" className="font-serif text-[26px] text-ink hover:text-grey max-[640px]:text-[20px]">
         Archive 233
       </Link>
-      <nav className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">
-        {user && (
-          <Link href="/cart" className="flex items-center gap-1.5 hover:text-ink">
-            Cart
-            <span className="text-ink">{count}</span>
-          </Link>
-        )}
-        {user && user.role === "CUSTOMER" && (
-          <Link href="/orders" className="hover:text-ink">
-            My orders
-          </Link>
-        )}
-        {user && user.role === "ADMIN" && (
-          <Link href="/admin/dashboard" className="hover:text-ink">
+      <div className="flex items-center gap-[22px]">
+        {user?.role === "ADMIN" && (
+          <Link
+            href="/admin/dashboard"
+            className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink"
+          >
             Dashboard
           </Link>
         )}
-        {!ready ? null : user ? (
-          <>
-            <span className="text-ink">{user.fullName}</span>
-            <button
-              className="hover:text-ink"
-              onClick={() => {
-                logout();
-                router.push("/products");
-              }}
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <Link href="/login" className="hover:text-ink">
-            Sign in
-          </Link>
-        )}
-      </nav>
+        <Link
+          href="/products?search=1"
+          aria-label="Search"
+          className="flex h-11 w-11 items-center justify-center text-ink hover:opacity-[0.55]"
+        >
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <circle cx="8" cy="8" r="6" />
+            <line x1="12.5" y1="12.5" x2="17" y2="17" />
+          </svg>
+        </Link>
+        <Link
+          href="/cart"
+          aria-label="Cart"
+          className="flex h-11 items-center gap-1.5 text-ink hover:opacity-[0.55]"
+        >
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <rect x="1" y="5" width="14" height="12" />
+            <path d="M5 5V3.5A3 3 0 0 1 11 3.5V5" />
+          </svg>
+          <span className="font-mono text-[11px]">{count}</span>
+        </Link>
+        <Link
+          href="/account"
+          aria-label="Account"
+          className="flex h-11 w-11 items-center justify-center text-ink hover:opacity-[0.55]"
+        >
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <circle cx="9" cy="6" r="3.2" />
+            <path d="M2.5 16c0-3.2 2.9-5.2 6.5-5.2s6.5 2 6.5 5.2" />
+          </svg>
+        </Link>
+      </div>
     </header>
   );
 }

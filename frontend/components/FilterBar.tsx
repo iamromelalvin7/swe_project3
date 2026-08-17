@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { CatalogFilterOptions } from "@/lib/types";
 
@@ -21,8 +21,18 @@ export function FilterBar({ options }: { options: CatalogFilterOptions }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [searchOpen, setSearchOpen] = useState(!!searchParams.get("q"));
+  const [searchOpen, setSearchOpen] = useState(!!searchParams.get("q") || searchParams.get("search") === "1");
   const [queryInput, setQueryInput] = useState(searchParams.get("q") ?? "");
+
+  // The header's search icon links to /products?search=1 — a client-side
+  // navigation within the same route that doesn't remount this component,
+  // so the useState initializer above only fires once and misses the hint
+  // on a second, later navigation. React to it explicitly instead.
+  useEffect(() => {
+    if (searchParams.get("search") === "1") {
+      setSearchOpen(true);
+    }
+  }, [searchParams]);
 
   const priceKey = useMemo(() => {
     const min = searchParams.get("minPrice");
@@ -97,7 +107,10 @@ export function FilterBar({ options }: { options: CatalogFilterOptions }) {
               apply({ q: null });
             }}
           >
-            ✕
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#12100E" strokeWidth="1.3">
+              <line x1="1.5" y1="1.5" x2="14.5" y2="14.5" />
+              <line x1="14.5" y1="1.5" x2="1.5" y2="14.5" />
+            </svg>
           </button>
         </div>
       )}
@@ -105,10 +118,14 @@ export function FilterBar({ options }: { options: CatalogFilterOptions }) {
       <div className="flex min-h-[52px] flex-wrap items-center gap-x-8 border-b border-rule px-14 max-[640px]:px-5">
         {!searchOpen && (
           <button
-            className="flex h-11 items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:text-grey"
+            aria-label="Search"
+            className="flex h-11 items-center justify-center text-ink hover:opacity-[0.55]"
             onClick={() => setSearchOpen(true)}
           >
-            Search
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <circle cx="8" cy="8" r="6" />
+              <line x1="12.5" y1="12.5" x2="17" y2="17" />
+            </svg>
           </button>
         )}
         {filters.map((f) => {

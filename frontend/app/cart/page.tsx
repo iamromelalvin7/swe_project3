@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
@@ -13,8 +14,13 @@ export default function CartPage() {
   const { lines, loading, error, refresh } = useCart();
   const router = useRouter();
 
+  useEffect(() => {
+    if (ready && !user) {
+      router.push("/login?redirect=/cart");
+    }
+  }, [ready, user, router]);
+
   if (ready && !user) {
-    router.push("/login?redirect=/cart");
     return null;
   }
 

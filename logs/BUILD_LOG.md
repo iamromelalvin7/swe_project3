@@ -1,5 +1,116 @@
 # Build Log
 
+## Design-fidelity rework: icon nav, bottom tab bar, unified Account, admin New product
+
+The project owner pointed out that the storefront chrome didn't match
+the approved design closely enough — confirmed by reading the actual
+prototype source rather than relying on memory of it from earlier
+phases:
+
+- The design's `isStore` header is icon-only (search toggle, cart with
+  a count badge) — `Header.tsx` had been built with text nav ("Cart",
+  "My orders", the customer's name, "Sign out") since Phase 2, which
+  never matched.
+- A real 3-tab bottom navigation bar (`showBottomNav: store && m` —
+  Shop / Cart / Account, each with an exact SVG + label) is fully
+  specified for mobile customer-facing screens and had never been
+  built at all.
+- The design has one unified `/account` screen (`isAccount`) with two
+  tabs — Details (editable name/email/phone/**default address** — the
+  schema already has a `default_address` column on `users`, so no
+  migration was actually needed, corrected after initially telling the
+  project owner otherwise) and My orders — rather than the separate
+  `/orders` page and header-embedded sign-out this app had instead.
+- The admin "New product" screen (`isAdminNew`) was never built —
+  flagged repeatedly since Phase 2 and deferred each time per the
+  project owner's own steer to keep following the phase plan. Every
+  field it needs already existed on the admin product API.
+
+**Genuine gap in the design itself, not just this implementation**:
+`goLogin` — the only path to the Account screen — is wired exclusively
+into the bottom tab bar, which is mobile-only. The static prototype has
+no visible way to reach Account/Sign-in on desktop at all. Flagged to
+the project owner rather than guessing; resolved by adding an account
+icon to the desktop header (reusing the same person-icon SVG the design
+already uses for the mobile Account tab) rather than showing the bottom
+bar at desktop widths, which would read as a mobile pattern on a wide
+screen.
+
+### What was built
+- `components/Header.tsx` rewritten: wordmark, search icon (links to
+  `/products?search=1`), cart icon + count, account icon. Admin users
+  additionally see a `Dashboard` text link — not in the design, but a
+  functional necessity flagged the same way the admin shell's kept
+  `Header` was in Phase 4.3.
+- `components/FilterBar.tsx`: the "Search"/✕ text controls replaced
+  with the design's own SVGs (same toggle behaviour, unchanged).
+- `components/BottomNav.tsx` (new): the 3-tab bar, `position: fixed`
+  rather than the design's own `sticky` — a deliberate adaptation, not
+  a visual deviation, since the design's `sticky` only worked inside
+  its own iframe-contained prototype frame; a real full-page app needs
+  `fixed` for a bottom bar that's reliably visible regardless of
+  scroll position. Hidden entirely under `/admin` (AdminShell has its
+  own sidebar), shown only under 640px, active tab computed from the
+  current path.
+- `app/account/page.tsx` (new): Details + My orders tabs, matching
+  copy ("Edit these and your checkout fills in from them."), sign-out
+  moved here from the header. `app/orders/page.tsx` now just redirects
+  to `/account?tab=orders` rather than a hard 404, in case anything
+  still links to the old URL.
+- **New backend endpoint**: `GET`/`PATCH /api/users/me`
+  (`UserController`/`UserService`, new `user/dto/` package) — nothing
+  previously let a user read or update their own name/phone/address;
+  register/login only ever returned the fields needed for the JWT.
+  Flagged before building since it wasn't in any phase's objectives,
+  but the design's own Details tab is meaningless without it.
+- `app/checkout/page.tsx`: now also fetches the saved profile and
+  pre-fills phone/address if the customer hasn't typed anything yet —
+  the natural, and only, meaning of "your checkout fills in from them."
+- `app/admin/products/new/page.tsx` (new): all 11 fields from the
+  design's `newFields`, wired to the existing, already-tested admin
+  product-create + image-upload endpoints — no new backend needed
+  there. `AdminShell`'s nav gets `Products` back now that it has a
+  real destination.
+
+### Two real bugs found while testing this, not just written and assumed correct
+1. **FilterBar's search toggle didn't open from the header icon.**
+   `useState(!!searchParams.get("search") === "1")` only evaluates once
+   at mount; navigating from `/products` to `/products?search=1` via
+   the header's `<Link>` is a client-side transition that doesn't
+   remount `FilterBar`, so the initializer never re-ran — the exact
+   same "stale initial state from a prop/param that changes without a
+   remount" class of bug already hit once before in Phase 2 (the
+   category-filter grid needed a `key` to force a remount). Fixed with
+   a `useEffect` that reacts to the param instead of only reading it
+   once.
+2. **`router.push` called directly in the render body** on `/cart` and
+   `/checkout` (`if (ready && !user) { router.push(...); return null; }`,
+   outside any `useEffect`) — surfaced as a live React warning
+   ("Cannot update a component while rendering a different component")
+   while testing the new bottom nav's active-tab state on a signed-out
+   `/cart` visit. Every other page in the app already guarded this
+   redirect inside a `useEffect`; these two were the only stragglers,
+   predating this session's changes. Fixed to match the pattern used
+   everywhere else.
+
+### Verified
+`mvn test` 4/5 (same pre-existing, unrelated fixture collision),
+`npx tsc --noEmit` and `next build` both clean. Full local Playwright
+pass against the real Supabase-backed local backend: guest header →
+account icon → signed-out state → sign in → header icon set →
+search-icon toggle (confirmed fixed) → Account Details tab (viewed,
+edited, saved, value persisted and reflected back) → My orders tab →
+checkout pre-fill from the just-saved profile (confirmed with a real
+item in cart) → mobile bottom nav on catalog/cart/account with correct
+active-tab highlighting, confirmed absent on `/admin/*` → admin New
+product screen, filled and published, confirmed it landed in the
+catalog with the correct price conversion (GHS 199.99 → 19999
+pesewas) — then archived, since it was a test fixture, not real
+inventory. Zero console errors on the final pass. Two Playwright test
+products created during this verification were archived immediately
+after (same real Supabase database local dev connects to — not a
+separate sandbox).
+
 ## Real bug: every Paystack payment confirmation was silently failing
 
 Reported by the project owner: every real payment, whether it went
