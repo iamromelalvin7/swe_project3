@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,15 @@ public class ProductImageService {
     private static final int DISPLAY_MAX_DIMENSION = 1600;
     private static final int THUMB_MAX_DIMENSION = 400;
 
+    // PRD risk #2: Render's instance is 512 MB, and decoding+resizing a
+    // full-resolution photo is the single most memory-hungry thing this
+    // service does. Capping concurrent resize work at 2 is the documented
+    // mitigation — without it, several admins uploading photos at once
+    // (or a burst of retries) can OOM the whole instance, not just the
+    // one request.
+    private static final int MAX_CONCURRENT_PROCESSING = 2;
+    private final Semaphore processingPermits = new Semaphore(MAX_CONCURRENT_PROCESSING);
+
     private final ProductRepository productRepository;
     private final SupabaseStorageClient storageClient;
 
@@ -62,8 +72,21 @@ public class ProductImageService {
                     "'" + file.getOriginalFilename() + "' is not a supported image type.");
             }
 
-            byte[] display = resize(original, DISPLAY_MAX_DIMENSION);
-            byte[] thumb = resize(original, THUMB_MAX_DIMENSION);
+            byte[] display;
+            byte[] thumb;
+            try {
+                processingPermits.acquire();
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SERVER_BUSY",
+                    "The server is busy processing other images. Try again in a moment.");
+            }
+            try {
+                display = resize(original, DISPLAY_MAX_DIMENSION);
+                thumb = resize(original, THUMB_MAX_DIMENSION);
+            } finally {
+                processingPermits.release();
+            }
 
             String baseName = productId + "/" + UUID.randomUUID();
             String displayUrl = storageClient.upload("products/" + baseName + ".jpg", display, MediaType.IMAGE_JPEG);

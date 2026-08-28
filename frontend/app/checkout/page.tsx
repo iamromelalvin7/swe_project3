@@ -16,6 +16,7 @@ export default function CheckoutPage() {
   const router = useRouter();
 
   const [zones, setZones] = useState<DeliveryZone[]>([]);
+  const [zonesError, setZonesError] = useState(false);
   const [name, setName] = useState(user?.fullName ?? "");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -25,8 +26,15 @@ export default function CheckoutPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const loadZones = () => {
+    setZonesError(false);
+    apiFetch<DeliveryZone[]>("/api/delivery-zones")
+      .then(setZones)
+      .catch(() => setZonesError(true));
+  };
+
   useEffect(() => {
-    apiFetch<DeliveryZone[]>("/api/delivery-zones").then(setZones);
+    loadZones();
   }, []);
 
   useEffect(() => {
@@ -144,6 +152,14 @@ export default function CheckoutPage() {
                 ))}
               </select>
               {errors.deliveryZoneId && <div className="mt-2 font-mono text-[11px] text-signal">{errors.deliveryZoneId}</div>}
+              {zonesError && (
+                <div className="mt-2 font-mono text-[11px] text-signal">
+                  Could not load delivery zones.{" "}
+                  <button type="button" onClick={loadZones} className="underline hover:text-ink">
+                    Try again
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Payment method</div>

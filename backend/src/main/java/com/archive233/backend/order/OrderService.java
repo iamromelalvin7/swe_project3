@@ -111,7 +111,7 @@ public class OrderService {
                     "'" + line.title() + "' sold out while you were checking out.");
             }
             order.getItems().add(new OrderItem(
-                order, line.productId(), line.title(), line.sizeLabel(), line.primaryImageUrl(),
+                order, line.productId(), line.title(), line.sizeLabel(), line.primaryThumbUrl(),
                 line.quantity(), line.pricePesewas()));
         }
 

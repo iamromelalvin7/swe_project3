@@ -17,19 +17,44 @@ export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const load = () => {
+    if (user?.role !== "ADMIN") return;
+    setLoadError(false);
+    authFetch<OrderDetail>(`/api/admin/orders/${params.id}`, user.token)
+      .then(setOrder)
+      .catch(() => setLoadError(true));
+  };
 
   useEffect(() => {
     if (ready && (!user || user.role !== "ADMIN")) {
       router.push("/login?redirect=/admin/orders");
       return;
     }
-    if (user?.role === "ADMIN") {
-      authFetch<OrderDetail>(`/api/admin/orders/${params.id}`, user.token).then(setOrder);
-    }
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, params.id]);
+
+  if (loadError) {
+    return (
+      <AdminShell>
+        <div className="py-24 text-center">
+          <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
+          <div className="mb-2.5 font-serif text-[28px]">This order did not load</div>
+          <div className="mb-6 text-sm text-grey">The shop is reachable but the order request failed.</div>
+          <button
+            onClick={load}
+            className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
+          >
+            Try again
+          </button>
+        </div>
+      </AdminShell>
+    );
+  }
 
   async function advance(status: OrderStatus) {
     if (!user || !order) return;
