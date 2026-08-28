@@ -38,3 +38,9 @@ supabase/.branches/
 # via the repo (see BUILD_LOG.md, Phase 4 4.1 entry). Already uploaded through
 # the real image pipeline to Supabase Storage for the products that use them.
 clothes/
+
+# Project-governance docs — kept locally for reference, deliberately excluded
+# from the GitHub repo itself (removed from history 2026-08-21, per request).
+/CLAUDE.md
+/docs/PRD.md
+/docs/OBJECTIVES.md
