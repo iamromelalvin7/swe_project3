@@ -1,5 +1,46 @@
 # Build Log
 
+## Post-Phase-4 — re-crop an existing photo in place
+
+The crop tool from the previous entry only ever ran on a freshly-picked
+file — an already-uploaded photo could be reordered but never re-framed.
+Closed that gap:
+
+- `ImageCropEditor` now takes a `source: { kind: "file"; file } | { kind:
+  "url"; url }` instead of a bare `File` — re-cropping an existing photo
+  loads it straight from its own Supabase Storage URL with
+  `crossOrigin="anonymous"` (needed so the confirm step's `canvas.toBlob`
+  doesn't throw on a tainted cross-origin canvas; verified live against a
+  real Supabase-hosted photo, not assumed — see below).
+- Backend: `PUT /api/admin/products/{id}/images/{imageId}` (new) re-derives
+  a photo's display/thumb pair from a new file and repoints that same row
+  at it — id and position untouched, so this is a true in-place edit, not
+  an append. The previous derivative pair is simply orphaned in Supabase
+  Storage (nothing else ever referenced those exact files, so there's
+  nothing to reconcile). `ProductImage` gained `setUrl`/`setThumbUrl`.
+- Edit page: each existing photo now has an "Edit" button opening the same
+  crop editor; confirming PUTs the result and reloads.
+- `backend/.../catalog/ProductImageReplaceTest.java` (new) covers the
+  service method — id/position preserved, rejects an image id that isn't
+  the product's own, rejects a non-image file. `SupabaseStorageClient` is
+  swapped for a hand-written subclass via `@TestConfiguration`/`@Primary`
+  rather than a Mockito `@MockBean`: this machine's JDK (26, a preview
+  build the project doesn't target — see pom.xml's actual release target
+  of 21) can't run Mockito's inline-mock byte-buddy agent, so a plain
+  subclass overriding the one network-calling method sidesteps that
+  entirely rather than fighting it.
+
+**Verified live, not just built** — and this one specifically needed a real
+production photo, not a mock: created a clearly-labelled DRAFT test product
+("PLAYWRIGHT VERIFY re-crop test (delete me)") with one real Supabase-hosted
+photo, drove the actual Edit → zoom/drag → Use photo flow through
+Playwright, confirmed the `<img crossorigin>` loaded with its real natural
+dimensions (no CORS/taint block), the replace PUT returned 200, and a fresh
+GET showed the photo's URL had genuinely changed. Archived the test product
+afterward (no delete-image or delete-product endpoint exists — same
+non-destructive pattern already used for earlier test rows in this
+database).
+
 ## Post-Phase-4 — header: sign-in redirect bug, sign-in button, store/dashboard toggle
 
 Traced the reported bug ("logging in as a customer doesn't land on

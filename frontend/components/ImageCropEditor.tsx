@@ -8,19 +8,24 @@ const BOX_HEIGHT = Math.round(BOX_WIDTH / PRODUCT_PHOTO_ASPECT);
 
 type Offset = { x: number; y: number };
 
+/** A brand-new file the admin just picked, or an already-uploaded photo being re-cropped in place. */
+export type ImageSource = { kind: "file"; file: File } | { kind: "url"; url: string };
+
 /**
  * A pan-and-zoom cropper for one photo, framed to the exact 3:4 the product
  * grid/gallery display at (aspect-[3/4]) — resize is the zoom slider,
  * "position them well to be viewed" is the drag. Confirming bakes the framed
  * region into a WebP blob (lib/images.ts) at a fixed output resolution, so
  * the server's automatic object-fit:cover never re-crops it unpredictably.
+ * Works the same way whether the source is a fresh `File` (new upload) or
+ * the `url` of a photo already on the product (re-cropping it in place).
  */
 export function ImageCropEditor({
-  file,
+  source,
   onCancel,
   onConfirm,
 }: {
-  file: File;
+  source: ImageSource;
   onCancel: () => void;
   onConfirm: (blob: Blob) => void;
 }) {
@@ -32,15 +37,21 @@ export function ImageCropEditor({
   const [processing, setProcessing] = useState(false);
   const drag = useRef<{ startX: number; startY: number; startOffset: Offset } | null>(null);
 
-  // Created inside the effect (not useMemo) so React 18 Strict Mode's dev-only
-  // double-invoke — mount, simulated unmount, remount — creates a fresh URL on
-  // the second mount instead of revoking the one and only memoized URL and
-  // leaving the <img> permanently pointed at a dead blob: reference.
+  // A file's object URL is created inside the effect (not useMemo) so React
+  // 18 Strict Mode's dev-only double-invoke — mount, simulated unmount,
+  // remount — creates a fresh URL on the second mount instead of revoking
+  // the one and only memoized URL and leaving the <img> permanently pointed
+  // at a dead blob: reference. An already-uploaded photo's own URL needs no
+  // such lifecycle — it's just used directly.
   useEffect(() => {
-    const url = URL.createObjectURL(file);
+    if (source.kind === "url") {
+      setObjectUrl(source.url);
+      return;
+    }
+    const url = URL.createObjectURL(source.file);
     setObjectUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [file]);
+  }, [source]);
 
   const baseScale = natural ? Math.max(BOX_WIDTH / natural.w, BOX_HEIGHT / natural.h) : 1;
   const effectiveScale = baseScale * zoom;
@@ -121,6 +132,7 @@ export function ImageCropEditor({
             <img
               ref={imgRef}
               src={objectUrl}
+              crossOrigin={source.kind === "url" ? "anonymous" : undefined}
               onLoad={onImageLoad}
               alt=""
               draggable={false}

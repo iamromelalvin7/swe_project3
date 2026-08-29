@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { useAuth } from "@/lib/auth";
 import { apiFetch, authFetch, ApiRequestError } from "@/lib/api";
+import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ImageDropzone, type PendingImage } from "@/components/ImageDropzone";
 import { ProductFormFields, type ProductFormValues } from "@/components/ProductFormFields";
 import type { AdminProductDetail, CatalogFilterOptions } from "@/lib/types";
@@ -27,6 +28,9 @@ export default function EditProductPage() {
   const [saved, setSaved] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [reorderError, setReorderError] = useState<string | null>(null);
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  const [replacing, setReplacing] = useState(false);
+  const [replaceError, setReplaceError] = useState<string | null>(null);
 
   const load = () => {
     if (user?.role !== "ADMIN") return;
@@ -144,6 +148,30 @@ export default function EditProductPage() {
     }
   }
 
+  async function replaceImage(imageId: string, blob: Blob) {
+    if (!user || !product) return;
+    setEditingImageId(null);
+    setReplacing(true);
+    setReplaceError(null);
+    try {
+      const body = new FormData();
+      body.append("file", blob, "photo.webp");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${product.id}/images/${imageId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${user.token}` },
+        body,
+      });
+      if (!res.ok) {
+        throw new Error("Could not update this photo.");
+      }
+      load();
+    } catch {
+      setReplaceError("Could not update this photo.");
+    } finally {
+      setReplacing(false);
+    }
+  }
+
   async function archive() {
     if (!user || !product) return;
     if (!window.confirm(`Archive "${product.title}"? It will no longer be visible to customers.`)) return;
@@ -222,6 +250,13 @@ export default function EditProductPage() {
                       >
                         {img.position + 1}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditingImageId(img.id)}
+                        className="absolute right-1 top-1 bg-cream/90 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] hover:opacity-70"
+                      >
+                        Edit
+                      </button>
                       <div className="absolute bottom-1 right-1 flex gap-1">
                         <button
                           type="button"
@@ -248,8 +283,26 @@ export default function EditProductPage() {
                 {reorderError && (
                   <div className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-signal">{reorderError}</div>
                 )}
+                {replaceError && (
+                  <div className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-signal">{replaceError}</div>
+                )}
                 <div className="mt-2 text-xs text-grey">
-                  Use the arrows to reorder — position 1 is primary. Existing photos can&apos;t be removed here yet, only added to.
+                  Use the arrows to reorder — position 1 is primary. Edit re-crops a photo in place.
+                </div>
+              </div>
+            )}
+
+            {editingImageId && (
+              <ImageCropEditor
+                source={{ kind: "url", url: product.images.find((img) => img.id === editingImageId)!.url }}
+                onCancel={() => setEditingImageId(null)}
+                onConfirm={(blob) => replaceImage(editingImageId, blob)}
+              />
+            )}
+            {replacing && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60">
+                <div className="bg-cream px-6 py-4 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">
+                  Updating photo…
                 </div>
               </div>
             )}

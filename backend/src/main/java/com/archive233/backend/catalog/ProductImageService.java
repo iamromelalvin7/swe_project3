@@ -100,6 +100,54 @@ public class ProductImageService {
         return product.getImages();
     }
 
+    /**
+     * Re-derives one already-uploaded photo's display/thumb pair from a new
+     * file and repoints that same {@link ProductImage} row at it — the id
+     * and position are untouched, so this is how the edit page's "re-crop"
+     * flow updates a photo in place instead of appending a new one. The
+     * previously-derived files are simply orphaned in storage; nothing else
+     * on record ever referenced them by anything other than this row's own
+     * url/thumbUrl, so there's no dangling reference to clean up.
+     */
+    public ProductImage replace(UUID productId, UUID imageId, MultipartFile file) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new NotFoundException("Product not found."));
+        ProductImage image = product.getImages().stream()
+            .filter(img -> img.getId().equals(imageId))
+            .findFirst()
+            .orElseThrow(() -> new NotFoundException("Photo not found."));
+
+        byte[] original = readBytes(file);
+        MediaType detected = ImageMagicBytes.detect(original);
+        if (detected == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                "'" + file.getOriginalFilename() + "' is not a supported image type.");
+        }
+
+        byte[] display;
+        byte[] thumb;
+        try {
+            processingPermits.acquire();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SERVER_BUSY",
+                "The server is busy processing other images. Try again in a moment.");
+        }
+        try {
+            display = resize(original, DISPLAY_MAX_DIMENSION);
+            thumb = resize(original, THUMB_MAX_DIMENSION);
+        } finally {
+            processingPermits.release();
+        }
+
+        String baseName = productId + "/" + UUID.randomUUID();
+        image.setUrl(storageClient.upload("products/" + baseName + ".jpg", display, MediaType.IMAGE_JPEG));
+        image.setThumbUrl(storageClient.upload("products/" + baseName + "_thumb.jpg", thumb, MediaType.IMAGE_JPEG));
+
+        productRepository.save(product);
+        return image;
+    }
+
     private byte[] readBytes(MultipartFile file) {
         try {
             return file.getBytes();

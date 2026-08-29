@@ -80,4 +80,10 @@ public class AdminProductController {
             .map(img -> new ProductImageDto(img.getId(), img.getUrl(), img.getThumbUrl(), img.getPosition()))
             .toList();
     }
+
+    @PutMapping("/{id}/images/{imageId}")
+    public ProductImageDto replaceImage(@PathVariable UUID id, @PathVariable UUID imageId, @RequestParam("file") MultipartFile file) {
+        ProductImage image = productImageService.replace(id, imageId, file);
+        return new ProductImageDto(image.getId(), image.getUrl(), image.getThumbUrl(), image.getPosition());
+    }
 }

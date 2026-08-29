@@ -59,7 +59,9 @@ export function ImageDropzone({
 
   return (
     <div>
-      {queue[0] && <ImageCropEditor file={queue[0]} onCancel={onCropCancel} onConfirm={onCropConfirm} />}
+      {queue[0] && (
+        <ImageCropEditor source={{ kind: "file", file: queue[0] }} onCancel={onCropCancel} onConfirm={onCropConfirm} />
+      )}
 
       <div
         onDragOver={(e) => {
