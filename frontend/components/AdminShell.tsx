@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { AdminBottomNav } from "@/components/AdminBottomNav";
 import { Header } from "@/components/Header";
-import { useAuth } from "@/lib/auth";
 
 // Two-column admin layout from the design export (admCols/admSidePad/admNavDir/admPad,
 // lines ~1011-1014 of Archive 233.dc.html). The design's own sidebar wordmark is
 // skipped since the site-wide Header above it already shows "Archive 233". The admin
 // Header intentionally hides the customer-facing cart/search/account icons (per the
-// project owner: an admin session should only ever show Dashboard/Products/Orders),
-// so "Sign out" — previously reachable only via the account icon — lives here instead.
+// project owner: an admin session should only ever show Dashboard/Products/Orders).
+//
+// Below 900px the left-column nav is replaced by AdminBottomNav (a fixed tab bar,
+// matching the customer-facing BottomNav's pattern) rather than squeezing it into a
+// horizontal strip — "Sign out" moved to the Header, next to the store/dashboard
+// toggle, since it no longer has a sidebar to live at the bottom of on mobile.
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/products", label: "Products" },
@@ -19,15 +23,13 @@ const NAV = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuth();
 
   return (
-    <main>
+    <main className="flex h-screen flex-col overflow-hidden">
       <Header />
-      <div className="grid grid-cols-1 min-[900px]:grid-cols-[210px_1fr]" style={{ minHeight: "calc(100vh - 76px)" }}>
-        <div className="flex flex-col border-b border-rule px-5 py-6 min-[900px]:border-b-0 min-[900px]:border-r min-[900px]:px-7 min-[900px]:py-10">
-          <div className="flex flex-row gap-1 min-[900px]:flex-col">
+      <div className="flex min-h-0 flex-1 min-[900px]:grid min-[900px]:grid-cols-[210px_1fr]">
+        <div className="hidden flex-col border-r border-rule px-7 py-10 min-[900px]:flex">
+          <div className="flex flex-col gap-1">
             {NAV.map((item) => {
               const active = pathname?.startsWith(item.href);
               return (
@@ -43,18 +45,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
-          <button
-            onClick={() => {
-              logout();
-              router.push("/products");
-            }}
-            className="mt-4 py-2.5 pl-3.5 text-left font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink min-[900px]:mt-auto min-[900px]:border-l-2 min-[900px]:border-transparent min-[900px]:pt-8"
-          >
-            Sign out
-          </button>
         </div>
-        <div className="min-w-0 px-5 pb-24 pt-7 min-[900px]:px-14 min-[900px]:pb-[120px] min-[900px]:pt-11">{children}</div>
+        {/* This is the one part of the admin view that scrolls — the Header
+            above and the sidebar/bottom nav stay put regardless of how tall
+            a given tab's content (e.g. the dashboard overview) gets. */}
+        <div className="min-w-0 overflow-y-auto px-5 pb-24 pt-7 min-[900px]:px-14 min-[900px]:pb-[120px] min-[900px]:pt-11">
+          {children}
+        </div>
       </div>
+      <AdminBottomNav />
     </main>
   );
 }

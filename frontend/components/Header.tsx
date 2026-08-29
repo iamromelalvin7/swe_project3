@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
 export function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { count } = useCart();
+  const router = useRouter();
   const pathname = usePathname() ?? "";
   const isAdmin = user?.role === "ADMIN";
   const inAdminSection = pathname.startsWith("/admin");
@@ -20,12 +21,24 @@ export function Header() {
       </Link>
       <div className="flex items-center gap-[22px]">
         {isAdmin && (
-          <Link
-            href={inAdminSection ? "/products" : "/admin/dashboard"}
-            className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink"
-          >
-            {inAdminSection ? "Store" : "Dashboard"}
-          </Link>
+          <>
+            <Link
+              href={inAdminSection ? "/products" : "/admin/dashboard"}
+              className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink"
+            >
+              {inAdminSection ? "Store" : "Dashboard"}
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                router.push("/products");
+              }}
+              className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink"
+            >
+              Sign out
+            </button>
+          </>
         )}
         {!isAdmin && user && inAccountSection && (
           <Link href="/products" className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink">

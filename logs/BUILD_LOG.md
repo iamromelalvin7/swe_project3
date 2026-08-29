@@ -1,5 +1,35 @@
 # Build Log
 
+## Post-Phase-4 — admin scroll containment + mobile bottom nav
+
+Two related complaints: the whole admin page scrolled together (header and
+sidebar included) instead of just the tab's own content, and the sidebar
+nav wasn't responsive on mobile at all — it was a horizontal strip of three
+links squeezed above the content, `Sign out` tacked on after them.
+
+- `AdminShell`: `<main>` is now `h-screen flex flex-col overflow-hidden`;
+  only the content pane (`overflow-y-auto`) scrolls. Header and the
+  sidebar/bottom-nav never move, on any screen size. Verified this isn't
+  just visual: `document.body.scrollHeight` equals the viewport height (the
+  page itself doesn't scroll) while the content div's `scrollHeight` exceeds
+  its `clientHeight` (it does).
+- `components/AdminBottomNav.tsx` (new): below 900px, the sidebar is
+  replaced entirely by a fixed bottom tab bar with SVG icons —
+  Dashboard/Products/Orders — mirroring the customer-facing `BottomNav.tsx`
+  exactly (same fixed-bar pattern, same icon-over-label layout, same
+  stroke-only icon style) rather than inventing a new mobile nav pattern.
+- `Header.tsx`: "Sign out" moved here for admin sessions, next to the
+  existing Store/Dashboard toggle — it no longer has a sidebar to live at
+  the bottom of on mobile.
+
+**Verified live** at both a desktop (1440px) and a phone (390px) viewport:
+desktop shows the sidebar plus "Store" and "Sign out" in the header; mobile
+shows the fixed bottom tab bar (Dashboard/Products/Orders, each with its
+icon) and the same header controls, no sidebar in the DOM's visible layout.
+
+**Verification:** `npx tsc --noEmit` — clean. `npm run build` — clean, 17
+routes. `npm test` — 3/3.
+
 ## Post-Phase-4 — photo re-crop: quality, speed, pencil icon
 
 Three issues reported after using the re-crop feature live: the re-cropped
