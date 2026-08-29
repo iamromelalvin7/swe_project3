@@ -1,5 +1,54 @@
 # Build Log
 
+## Post-Phase-4 — mobile responsiveness audit
+
+The remaining open item from the mobile-responsiveness ask (the admin nav
+itself was already fixed in an earlier entry): a systematic pass across the
+customer and admin sides at a 375px viewport, screenshotting every major
+page and checking for horizontal overflow.
+
+Backend note: this audit needed a running app, but the backend can't start
+at all right now (see the email-verification entry above — schema
+validation fails until that migration is applied). Worked around it by
+temporarily moving the four new JPA-entity/repository files it added
+out of the source tree (not committing anything, not touching git history)
+so the rest of the app could run against the current production schema,
+then moved them back and confirmed `git diff HEAD -- backend/` was empty
+before finishing.
+
+**One real bug found and fixed:** `ProductFormFields` (the admin
+new-product/edit-product form) used a bare `grid-cols-6` with no responsive
+variant at all, so Category/Brand/Size/Condition/Price/Quantity were always
+squeezed into 2-of-6 columns regardless of viewport — on a 375px phone that
+measured out to a 90px-wide `<select>`, with "Pick a category first"
+truncated to "Pick a cate…". Fixed by making the grid `grid-cols-1` below
+640px (each field takes a full row) and keeping the existing 6-column
+layout at `min-[640px]:` and up — verified the same `<select>` went from
+90px to 335px wide, and confirmed no regression on desktop.
+
+**Investigated and ruled out as false positives:** two pages'
+full-page screenshots showed the fixed bottom nav appearing to overlap
+page content mid-scroll (product detail's sticky title column; the
+products catalog grid). Chased this down before "fixing" it: normal
+viewport-sized screenshots (matching what a phone actually shows while
+scrolling) rendered both perfectly cleanly, with no overlap at either the
+top or bottom of a real scroll. This is a Playwright `fullPage`-screenshot
+artifact with `position: sticky`/`fixed` elements, not something a real
+user would ever see — worth recording so it isn't rediscovered and
+"fixed" again later based on a misleading capture.
+
+Also swept the whole frontend for any other bare `grid-cols-N` with no
+responsive variant (the same bug class as the form-fields one) — the only
+other matches are the photo-thumbnail grids in `ImageDropzone` and the
+edit page's existing-photos grid, both `grid-cols-3` of small square
+images, which read fine on a 375px screen and aren't the same problem
+(no text truncation, nothing illegible).
+
+**Verification:** `npx tsc --noEmit` — clean. `npm run build` — clean, 20
+routes. `npm test` — 3/3. Backend confirmed unchanged
+(`git diff HEAD -- backend/` empty) after the temporary local-only
+workaround above.
+
 ## Post-Phase-4 — email verification and password reset (code complete, blocked on two manual steps)
 
 Requested: registration should no longer let anyone type any email and get

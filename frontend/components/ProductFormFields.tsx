@@ -48,8 +48,8 @@ export function ProductFormFields({
   const sizeOptions = selectedSizeGroup ? options?.sizeOptionsByGroup[selectedSizeGroup] ?? [] : [];
 
   return (
-    <div className="grid grid-cols-6 gap-x-8 gap-y-7">
-      <FormField label="Title" span="col-span-6" error={errors.title}>
+    <div className="grid grid-cols-1 gap-x-8 gap-y-7 min-[640px]:grid-cols-6">
+      <FormField label="Title" span="min-[640px]:col-span-6" error={errors.title}>
         <input
           className="field-input"
           value={form.title}
@@ -57,7 +57,7 @@ export function ProductFormFields({
           placeholder="e.g. 1990s Carhartt Detroit Jacket"
         />
       </FormField>
-      <FormField label="Category" span="col-span-2" error={errors.categoryId}>
+      <FormField label="Category" span="min-[640px]:col-span-2" error={errors.categoryId}>
         <select
           className="field-input"
           value={form.categoryId}
@@ -74,10 +74,10 @@ export function ProductFormFields({
           ))}
         </select>
       </FormField>
-      <FormField label="Brand" span="col-span-2" error={errors.brand}>
+      <FormField label="Brand" span="min-[640px]:col-span-2" error={errors.brand}>
         <input className="field-input" value={form.brand} onChange={(e) => update("brand", e.target.value)} placeholder="Carhartt" />
       </FormField>
-      <FormField label="Size" span="col-span-2" error={errors.sizeLabel}>
+      <FormField label="Size" span="min-[640px]:col-span-2" error={errors.sizeLabel}>
         <select
           className="field-input"
           value={form.sizeLabel}
@@ -92,7 +92,7 @@ export function ProductFormFields({
           ))}
         </select>
       </FormField>
-      <FormField label="Condition" span="col-span-2" error={errors.condition}>
+      <FormField label="Condition" span="min-[640px]:col-span-2" error={errors.condition}>
         <select className="field-input" value={form.condition} onChange={(e) => update("condition", e.target.value as ProductCondition)}>
           <option value="">Select</option>
           {CONDITIONS.map((c) => (
@@ -102,7 +102,7 @@ export function ProductFormFields({
           ))}
         </select>
       </FormField>
-      <FormField label="Price GHS" span="col-span-2" error={errors.pricePesewas}>
+      <FormField label="Price GHS" span="min-[640px]:col-span-2" error={errors.pricePesewas}>
         <input
           className="field-input font-mono"
           value={form.pricePesewas}
@@ -111,7 +111,7 @@ export function ProductFormFields({
           inputMode="decimal"
         />
       </FormField>
-      <FormField label="Quantity" span="col-span-2" error={errors.stockQuantity} help="Leave at 1 for one-of-a-kind pieces">
+      <FormField label="Quantity" span="min-[640px]:col-span-2" error={errors.stockQuantity} help="Leave at 1 for one-of-a-kind pieces">
         <input
           className="field-input font-mono"
           value={form.stockQuantity}
@@ -120,13 +120,13 @@ export function ProductFormFields({
           inputMode="numeric"
         />
       </FormField>
-      <FormField label="Colour" span="col-span-3">
+      <FormField label="Colour" span="min-[640px]:col-span-3">
         <input className="field-input" value={form.colour} onChange={(e) => update("colour", e.target.value)} placeholder="Hamilton Brown" />
       </FormField>
-      <FormField label="Era" span="col-span-3">
+      <FormField label="Era" span="min-[640px]:col-span-3">
         <input className="field-input" value={form.era} onChange={(e) => update("era", e.target.value)} placeholder="1990s" />
       </FormField>
-      <FormField label="Fit notes" span="col-span-6">
+      <FormField label="Fit notes" span="min-[640px]:col-span-6">
         <input
           className="field-input"
           value={form.sizingNotes}
@@ -134,7 +134,7 @@ export function ProductFormFields({
           placeholder="How does this piece measure and drape?"
         />
       </FormField>
-      <FormField label="Flaws" span="col-span-6">
+      <FormField label="Flaws" span="min-[640px]:col-span-6">
         <input
           className="field-input"
           value={form.flaws}
