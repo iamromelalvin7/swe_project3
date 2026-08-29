@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
@@ -88,11 +89,8 @@ public class ProductImageService {
                 processingPermits.release();
             }
 
-            String baseName = productId + "/" + UUID.randomUUID();
-            String displayUrl = storageClient.upload("products/" + baseName + ".jpg", display, MediaType.IMAGE_JPEG);
-            String thumbUrl = storageClient.upload("products/" + baseName + "_thumb.jpg", thumb, MediaType.IMAGE_JPEG);
-
-            product.getImages().add(new ProductImage(product, displayUrl, thumbUrl, nextPosition));
+            Derivatives urls = uploadDerivatives(productId, display, thumb);
+            product.getImages().add(new ProductImage(product, urls.displayUrl(), urls.thumbUrl(), nextPosition));
             nextPosition++;
         }
 
@@ -140,12 +138,30 @@ public class ProductImageService {
             processingPermits.release();
         }
 
-        String baseName = productId + "/" + UUID.randomUUID();
-        image.setUrl(storageClient.upload("products/" + baseName + ".jpg", display, MediaType.IMAGE_JPEG));
-        image.setThumbUrl(storageClient.upload("products/" + baseName + "_thumb.jpg", thumb, MediaType.IMAGE_JPEG));
+        Derivatives urls = uploadDerivatives(productId, display, thumb);
+        image.setUrl(urls.displayUrl());
+        image.setThumbUrl(urls.thumbUrl());
 
         productRepository.save(product);
         return image;
+    }
+
+    /**
+     * The two derivative uploads are independent network calls to Supabase
+     * Storage — running them concurrently rather than one after the other
+     * is most of the wall-clock time an upload or re-crop takes, since
+     * neither depends on the other's result.
+     */
+    private Derivatives uploadDerivatives(UUID productId, byte[] display, byte[] thumb) {
+        String baseName = productId + "/" + UUID.randomUUID();
+        CompletableFuture<String> displayUpload = CompletableFuture.supplyAsync(
+            () -> storageClient.upload("products/" + baseName + ".jpg", display, MediaType.IMAGE_JPEG));
+        CompletableFuture<String> thumbUpload = CompletableFuture.supplyAsync(
+            () -> storageClient.upload("products/" + baseName + "_thumb.jpg", thumb, MediaType.IMAGE_JPEG));
+        return new Derivatives(displayUpload.join(), thumbUpload.join());
+    }
+
+    private record Derivatives(String displayUrl, String thumbUrl) {
     }
 
     private byte[] readBytes(MultipartFile file) {
@@ -163,7 +179,7 @@ public class ProductImageService {
             Thumbnails.of(new ByteArrayInputStream(original))
                 .size(maxDimension, maxDimension)
                 .outputFormat("jpg")
-                .outputQuality(0.85)
+                .outputQuality(0.92)
                 .toOutputStream(out);
             return out.toByteArray();
         } catch (IOException | RuntimeException ex) {

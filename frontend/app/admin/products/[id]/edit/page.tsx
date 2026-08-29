@@ -8,7 +8,7 @@ import { apiFetch, authFetch, ApiRequestError } from "@/lib/api";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ImageDropzone, type PendingImage } from "@/components/ImageDropzone";
 import { ProductFormFields, type ProductFormValues } from "@/components/ProductFormFields";
-import type { AdminProductDetail, CatalogFilterOptions } from "@/lib/types";
+import type { AdminProductDetail, CatalogFilterOptions, ProductImage } from "@/lib/types";
 
 export default function EditProductPage() {
   const { ready, user } = useAuth();
@@ -164,7 +164,10 @@ export default function EditProductPage() {
       if (!res.ok) {
         throw new Error("Could not update this photo.");
       }
-      load();
+      const updatedImage: ProductImage = await res.json();
+      setProduct((prev) =>
+        prev ? { ...prev, images: prev.images.map((img) => (img.id === imageId ? updatedImage : img)) } : prev
+      );
     } catch {
       setReplaceError("Could not update this photo.");
     } finally {
@@ -253,9 +256,12 @@ export default function EditProductPage() {
                       <button
                         type="button"
                         onClick={() => setEditingImageId(img.id)}
-                        className="absolute right-1 top-1 bg-cream/90 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] hover:opacity-70"
+                        aria-label="Edit photo"
+                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center bg-cream/90 hover:opacity-70"
                       >
-                        Edit
+                        <svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2">
+                          <path d="M12.5 2.5a1.6 1.6 0 0 1 2.3 2.3L6 13.6l-3 .9.9-3z" strokeLinejoin="round" />
+                        </svg>
                       </button>
                       <div className="absolute bottom-1 right-1 flex gap-1">
                         <button

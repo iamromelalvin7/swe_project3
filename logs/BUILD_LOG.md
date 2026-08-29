@@ -1,5 +1,63 @@
 # Build Log
 
+## Post-Phase-4 — photo re-crop: quality, speed, pencil icon
+
+Three issues reported after using the re-crop feature live: the re-cropped
+photo looked visibly worse on the storefront, the update felt slow, and the
+"Edit" control should be an icon, not a text label.
+
+**Quality.** A re-crop is a photo's *second* lossy generation — the source
+for a re-crop is the already-once-compressed 1600px display derivative, not
+the discarded original (FR-G7), so it goes through client-side WebP
+encoding and a server-side JPEG re-encode *on top of* the compression it
+already has. New uploads only ever go through that same two-pass pipeline
+once, so the loss was far less visible there. Raised quality at both lossy
+stages rather than trying to skip either pass (skipping the server pass
+would still leave the WebP→JPEG format conversion unaddressed, and the two
+derivative sizes still need deriving): client WebP quality 0.85 → 0.95 plus
+`imageSmoothingQuality: "high"` on the crop canvas (`lib/images.ts`), server
+JPEG quality 0.85 → 0.92 (`ProductImageService.resize`). Confirmed
+acceptable live on a real photo, not assumed.
+
+**Speed.** Two independent fixes:
+- Backend: the display and thumb derivatives were uploaded to Supabase
+  Storage one after the other — two full network round trips where only
+  one was necessary, since neither upload depends on the other. Now run
+  concurrently via `CompletableFuture` (`ProductImageService.uploadDerivatives`,
+  shared by both `upload` and `replace`). Verified with temporary per-call
+  timing logs (removed before committing) that the two really do start
+  together rather than serializing — this cuts the slower of Supabase's two
+  round trips from being pure overhead.
+- Frontend: after a successful replace, the edit page was calling `load()`
+  — a full reload re-fetching both `/api/catalog/filters` and the entire
+  product detail — when the `PUT` response already *is* the updated photo.
+  Now splices that response directly into local state instead, cutting two
+  more full round trips down to zero.
+
+Remaining latency (a few seconds on a real photo, measured live) is
+resize/DB/network cost already inherent to the pipeline — Thumbnailator
+decoding and re-encoding two derivatives from a real-sized JPEG, and this
+session's already-documented Supabase pooler/storage latency from this
+sandbox — not something introduced by this feature or fixable without a
+larger architectural change (e.g. skipping server-side re-processing
+entirely for images already at target dimensions, which isn't reliable to
+detect without decoding them anyway).
+
+**Pencil icon.** Replaced the small text "Edit" button on each existing
+photo with an inline SVG pencil, matching the stroke-only icon style
+already used in `Header.tsx` (`viewBox 18x18`, `stroke="currentColor"`,
+`strokeWidth 1.2`, no fill) rather than inventing a new visual language.
+
+**Verified live**, not just built: created a clearly-labelled DRAFT test
+product with a real photo from this session's own product photography
+(`clothes/`, not redistributed, used only for local testing), re-cropped it
+through the actual UI, confirmed the parallel uploads started concurrently
+via backend logs, and confirmed the Edit button's accessible text is empty
+(icon-only). Archived the test product afterward.
+
+**Verification:** `mvn test` — 12/12. `npx tsc --noEmit` — clean.
+`npm run build` — clean, 17 routes. `npm test` — 3/3.
+
 ## Post-Phase-4 — re-crop an existing photo in place
 
 The crop tool from the previous entry only ever ran on a freshly-picked

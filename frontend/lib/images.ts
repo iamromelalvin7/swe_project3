@@ -3,7 +3,7 @@ export const PRODUCT_PHOTO_ASPECT = 3 / 4;
 
 const OUTPUT_HEIGHT = 1600; // matches the server's own display-derivative cap
 const OUTPUT_WIDTH = Math.round(OUTPUT_HEIGHT * PRODUCT_PHOTO_ASPECT);
-const WEBP_QUALITY = 0.85;
+const WEBP_QUALITY = 0.95;
 
 export type CropRect = {
   sourceX: number;
@@ -28,6 +28,7 @@ export async function cropAndConvertToWebp(image: HTMLImageElement, crop: CropRe
   if (!ctx) {
     throw new Error("Canvas 2D context unavailable");
   }
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(
     image,
     crop.sourceX,
