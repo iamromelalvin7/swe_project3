@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
 export function Header() {
   const { user } = useAuth();
   const { count } = useCart();
+  const pathname = usePathname() ?? "";
   const isAdmin = user?.role === "ADMIN";
+  const inAdminSection = pathname.startsWith("/admin");
+  const inAccountSection = pathname.startsWith("/account") || pathname.startsWith("/orders");
 
   return (
     <header className="flex h-[76px] items-center justify-between border-b border-rule px-14 max-[640px]:h-[60px] max-[640px]:px-5">
@@ -17,10 +21,15 @@ export function Header() {
       <div className="flex items-center gap-[22px]">
         {isAdmin && (
           <Link
-            href="/admin/dashboard"
+            href={inAdminSection ? "/products" : "/admin/dashboard"}
             className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink"
           >
-            Dashboard
+            {inAdminSection ? "Store" : "Dashboard"}
+          </Link>
+        )}
+        {!isAdmin && user && inAccountSection && (
+          <Link href="/products" className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink">
+            Store
           </Link>
         )}
         {!isAdmin && (
@@ -36,16 +45,25 @@ export function Header() {
               </svg>
               <span className="font-mono text-[11px]">{count}</span>
             </Link>
-            <Link
-              href="/account"
-              aria-label="Account"
-              className="flex h-11 w-11 items-center justify-center text-ink hover:opacity-[0.55]"
-            >
-              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2">
-                <circle cx="9" cy="6" r="3.2" />
-                <path d="M2.5 16c0-3.2 2.9-5.2 6.5-5.2s6.5 2 6.5 5.2" />
-              </svg>
-            </Link>
+            {user ? (
+              <Link
+                href="/account"
+                aria-label="Account"
+                className="flex h-11 w-11 items-center justify-center text-ink hover:opacity-[0.55]"
+              >
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <circle cx="9" cy="6" r="3.2" />
+                  <path d="M2.5 16c0-3.2 2.9-5.2 6.5-5.2s6.5 2 6.5 5.2" />
+                </svg>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="flex h-11 items-center font-mono text-[11px] uppercase tracking-[0.1em] text-ink hover:opacity-[0.55]"
+              >
+                Sign in
+              </Link>
+            )}
           </>
         )}
       </div>

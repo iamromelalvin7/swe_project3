@@ -1,5 +1,35 @@
 # Build Log
 
+## Post-Phase-4 — header: sign-in redirect bug, sign-in button, store/dashboard toggle
+
+Traced the reported bug ("logging in as a customer doesn't land on
+/products") to `Header.tsx`: the account icon was shown unconditionally,
+even when logged out, always linking to `/account`. `/account` itself
+already redirects a signed-out visitor to `/login?redirect=/account`, so
+anyone who signed in from that entry point correctly returned to `/account`
+— not a bug — but there was no other way to reach `/login` without a
+`redirect` param, so *every* sign-in landed back on `/account` regardless
+of where the person actually meant to go.
+
+Fixed by only showing the account icon when `user` is set; a logged-out
+visitor now sees a plain "Sign in" link straight to `/login` (no redirect
+param), so `AuthForm`'s existing `router.push(searchParams.get("redirect")
+?? "/products")` falls through to `/products` as it always should have for
+that path.
+
+Also added the requested store/dashboard toggle, reusing the same
+mono-uppercase link style already in the header: admins see "Store" while
+inside `/admin/**` and "Dashboard" everywhere else (previously a static
+"Dashboard" link with no way back to the storefront at all); customers see
+a "Store" link back to `/products` while on `/account` or `/orders` (their
+closest equivalent to a personal dashboard).
+
+**Verified live** (Playwright against the production build): logged-out
+header shows "Sign in" with a bare `/login` href, not the account icon; the
+login page itself still renders correctly; the admin toggle shows "Store"
+in `/admin/dashboard` and "Dashboard" in `/products`; the customer toggle
+shows "Store" only while on `/account`.
+
 ## Post-Phase-4 — admin product management screen
 
 Flagged by the project owner: admin had no way to see the catalog
