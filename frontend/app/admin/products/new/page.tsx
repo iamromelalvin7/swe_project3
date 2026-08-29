@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { useAuth } from "@/lib/auth";
 import { apiFetch, authFetch, ApiRequestError } from "@/lib/api";
+import { downscaleAndConvertToWebp } from "@/lib/images";
 import type { CatalogFilterOptions, ProductCondition } from "@/lib/types";
+
+type PendingImage = { blob: Blob; previewUrl: string };
 
 const CONDITIONS: ProductCondition[] = ["NEW_WITH_TAGS", "EXCELLENT", "GOOD", "FAIR"];
 
@@ -28,7 +31,8 @@ export default function NewProductPage() {
   const router = useRouter();
   const [options, setOptions] = useState<CatalogFilterOptions | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [files, setFiles] = useState<File[]>([]);
+  const [images, setImages] = useState<PendingImage[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -48,9 +52,26 @@ export default function NewProductPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function onFiles(list: FileList | null) {
+  async function onFiles(list: FileList | null) {
     if (!list) return;
-    setFiles((prev) => [...prev, ...Array.from(list)].slice(0, 6));
+    setImageError(null);
+    const remaining = Math.max(0, 6 - images.length);
+    const incoming = Array.from(list).slice(0, remaining);
+    for (const file of incoming) {
+      try {
+        const blob = await downscaleAndConvertToWebp(file);
+        setImages((prev) => (prev.length >= 6 ? prev : [...prev, { blob, previewUrl: URL.createObjectURL(blob) }]));
+      } catch {
+        setImageError(`Could not process "${file.name}".`);
+      }
+    }
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => {
+      URL.revokeObjectURL(prev[index].previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
   }
 
   const selectedSizeGroup = options?.categories.find((c) => c.id === form.categoryId)?.sizeGroup ?? null;
@@ -83,9 +104,9 @@ export default function NewProductPage() {
         }),
       });
 
-      if (files.length > 0) {
+      if (images.length > 0) {
         const body = new FormData();
-        files.forEach((f) => body.append("files", f));
+        images.forEach((img, i) => body.append("files", img.blob, `photo-${i + 1}.webp`));
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${created.id}/images`, {
           method: "POST",
           headers: { Authorization: `Bearer ${user.token}` },
@@ -95,7 +116,8 @@ export default function NewProductPage() {
 
       if (andAnother) {
         setForm(emptyForm);
-        setFiles([]);
+        images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+        setImages([]);
         setJustPublished(true);
       } else {
         router.push("/admin/dashboard");
@@ -148,7 +170,7 @@ export default function NewProductPage() {
                 <span className="text-[15px]">Drop photos</span>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
                   multiple
                   className="hidden"
                   onChange={(e) => onFiles(e.target.files)}
@@ -156,11 +178,14 @@ export default function NewProductPage() {
               </label>
               <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Max 6</div>
             </div>
-            {files.length > 0 && (
+            {imageError && (
+              <div className="mt-4 font-mono text-[11px] uppercase tracking-[0.08em] text-signal">{imageError}</div>
+            )}
+            {images.length > 0 && (
               <div className="mt-4 grid grid-cols-3 gap-3">
-                {files.map((f, i) => (
+                {images.map((img, i) => (
                   <div key={i} className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-rule bg-white">
-                    <img src={URL.createObjectURL(f)} alt="" className="h-full w-full object-cover" />
+                    <img src={img.previewUrl} alt="" className="h-full w-full object-cover" />
                     <div
                       className={`absolute left-0 top-0 px-1.5 py-0.5 font-mono text-[10px] ${
                         i === 0 ? "bg-ink text-white" : "bg-transparent text-grey"
@@ -170,7 +195,7 @@ export default function NewProductPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setFiles((prev) => prev.filter((_, k) => k !== i))}
+                      onClick={() => removeImage(i)}
                       className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center bg-cream/90 text-[11px] hover:opacity-70"
                       aria-label="Remove photo"
                     >

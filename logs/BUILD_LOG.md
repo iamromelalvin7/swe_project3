@@ -1,5 +1,50 @@
 # Build Log
 
+## Phase 4 — FR-G5, client-side image downscale and WebP conversion
+
+Closes the Must-ship gap logged in `SUGGESTIONS.md` after the WebP-upload fix
+below: `admin/products/new/page.tsx` was sending raw, full-resolution files
+straight to the server with no client-side resize or re-encode step.
+
+- `frontend/lib/images.ts`: `downscaleAndConvertToWebp(file)` — decodes via
+  `createImageBitmap`, scales to at most 2000px on the longest side, draws to
+  an off-screen canvas, and encodes to WebP (quality 0.85) via
+  `canvas.toBlob`. Runs entirely client-side before the network call; the
+  server still derives its own 1600px/400px JPEG pair from whatever this
+  produces (unchanged).
+- `admin/products/new/page.tsx`: file-picker `accept` widened back to
+  `image/*` (the client no longer cares what format the admin's photo is in,
+  since it re-encodes everything to WebP); each selected file is converted
+  before being added to state, uploaded as `photo-N.webp`.
+- Backend: since the client now always uploads WebP, `ImageMagicBytes` needed
+  a real decoder behind its existing WebP signature check, or every such
+  upload would pass validation and then 500 at the resize step. Added
+  `com.twelvemonkeys.imageio:imageio-webp` to `backend/pom.xml` (registers an
+  ImageIO reader via SPI, no code wiring needed). New
+  `backend/.../storage/WebpSupportTest.java` asserts
+  `ImageIO.getImageReadersByMIMEType("image/webp")` actually returns a reader
+  — a regression guard for exactly the gap that caused the original bug this
+  session's earlier WebP fix (below) worked around by removing the format
+  instead of fixing the decoder.
+
+**Bug found and fixed before committing:** the `files`/`setFiles` state in
+`admin/products/new/page.tsx` had been renamed to `images`/`setImages`
+(holding `{ blob, previewUrl }` pairs) everywhere the upload logic lived, but
+three usages further down the same file — the "publish and add another"
+reset, the thumbnail grid's `.map`, and the remove button's `onClick` — still
+referenced the old `files`/`setFiles` names. `npx tsc --noEmit` caught it
+(`Cannot find name 'setFiles'`); the file would not have compiled. Fixed by
+finishing the migration: the grid now renders each image's stored
+`previewUrl` (rather than calling `URL.createObjectURL` fresh on every
+render, which leaked a new blob URL per render) and revokes it via
+`removeImage`/on reset.
+
+Removed the now-resolved FR-G5 entry from `SUGGESTIONS.md`.
+
+**Verification:** `mvn test` — 6/6 (`AuthApiTest` 4, `CartExpiryTest` 1,
+`WebpSupportTest` 1). `npx tsc --noEmit` — clean. `npm run build` — clean,
+all 16 routes compile.
+
 ## Phase 4 — expired-session auto-logout, frontend test infra
 
 `authFetch` (`frontend/lib/api.ts`) previously surfaced a 401 as a generic

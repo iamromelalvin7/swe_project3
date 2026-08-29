@@ -5,6 +5,13 @@ import org.springframework.http.MediaType;
 /**
  * Identifies an image's real type from its own bytes, never the client's
  * declared content-type (FR-G6 / NFR-S10).
+ *
+ * WebP recognition depends on the `imageio-webp` dependency (pom.xml) being
+ * on the classpath to give {@code ProductImageService#resize} an actual
+ * WebP decoder — without it, a file that passed this check would fail
+ * later with a confusing "Could not process image." FR-G5 has the client
+ * convert every upload to WebP before sending it, so this format must stay
+ * recognized here for that pipeline to actually work end to end.
  */
 public final class ImageMagicBytes {
 
