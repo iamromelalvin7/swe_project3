@@ -1,5 +1,66 @@
 # Build Log
 
+## Post-Phase-4 — admin product management screen
+
+Flagged by the project owner: admin had no way to see the catalog
+differently from a customer — the "Products" nav item just opened the new-
+product form, and browsing existing products meant using the public
+`/products` grid. Checked both the running app and the approved design
+export (`Archive 233.dc.html`): the design's own admin nav only ever
+specified Dashboard / New product / Orders — a product list/edit screen was
+never designed, not something built wrong. Flagged this explicitly and got
+approval before building a new screen, per the design hard rules.
+
+**Backend** — the public catalog query only ever returns `PUBLISHED`
+products (correctly, for customers), so admin needed its own read path:
+- `catalog/dto/AdminProductSummaryDto.java` / `AdminProductDetailDto.java` —
+  admin-only shapes carrying `ProductStatus` and raw `stockQuantity`
+  (`AdminProductDetailDto` also carries `categoryId`, needed to preselect
+  the edit form's dropdown) — none of which the public DTOs expose.
+- `ProductRepository.searchForAdmin(...)` — same shape as the existing
+  `search` query (category/image/availability joined in one query, no N+1)
+  but without the `status = PUBLISHED` filter, optionally filtered by
+  status and a title/brand search term.
+- `ProductService.listForAdmin` / `getDetailForAdmin` (now returns the admin
+  DTO) / `toAdminDetailDto`. `create`/`update`/`archive` now return
+  `AdminProductDetailDto` too, since every caller of those endpoints is
+  already an admin.
+- `AdminProductController`: added `GET` (list) and `GET /{id}` (detail).
+
+**Frontend:**
+- `components/ProductFormFields.tsx` and `components/ImageDropzone.tsx` —
+  extracted from the new-product page so the edit page doesn't duplicate
+  ~150 lines of form/upload JSX. `ImageDropzone` takes `maxImages` and
+  `startPosition` so the edit page can cap new uploads at `6 - existing`
+  and number them correctly after already-uploaded photos.
+- `app/admin/products/page.tsx` — the new list: a dense management table
+  (thumbnail/title/category/size/price/**stock**/availability/**status**)
+  deliberately built to look like the *orders* admin table, not the
+  customer photo-grid — status filter chips (All/Draft/Published/Archived)
+  and a title/brand search, both URL-param-driven like `/admin/orders`.
+  "+ New product" links to the existing create form.
+- `app/admin/products/[id]/edit/page.tsx` — loads via the two new GET
+  endpoints, prefills `ProductFormFields`, shows existing photos read-only
+  (no delete-image endpoint exists, so they can only be added to, not
+  removed — noted on-screen rather than silently limiting), an Archive
+  action, and Save-as-draft / Save-and-publish.
+- `AdminShell`'s "Products" link now points at the list instead of
+  straight at the new-product form; new-product's "Publish" now redirects
+  to the list instead of the dashboard.
+
+**Verified live**, not just built: ran the local backend against the real
+(schema-only-committed, data-live) Supabase database and the frontend dev
+server, signed in with a locally-minted JWT (never touches the login form
+or writes credentials anywhere), and drove it with Playwright —
+screenshots confirmed the list renders real product data with working
+status filters and search, the edit page prefills correctly from an actual
+product, and the client-side WebP dropzone produces a live preview. All of
+this was read-only against the database; no test data was written to the
+shared Supabase project.
+
+**Verification:** `mvn compile`/`mvn test` — 7/7. `npx tsc --noEmit` —
+clean. `npm run build` — clean, 19 routes. `npm test` — 3/3.
+
 ## Post-Phase-4 — rate limiting on login/register
 
 Approved and built after being logged in `SUGGESTIONS.md`: not in the PRD's

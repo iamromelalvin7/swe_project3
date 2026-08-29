@@ -10,6 +10,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.archive233.backend.catalog.dto.AdminProductDetailDto;
+import com.archive233.backend.catalog.dto.AdminProductSummaryDto;
 import com.archive233.backend.catalog.dto.ProductDetailDto;
 import com.archive233.backend.catalog.dto.ProductImageDto;
 import com.archive233.backend.catalog.dto.ProductRequest;
@@ -60,13 +62,21 @@ public class ProductService {
         return toDetailDto(product);
     }
 
-    public ProductDetailDto getDetailForAdmin(UUID id) {
-        Product product = productRepository.findDetailById(id)
-            .orElseThrow(() -> new NotFoundException("Product not found."));
-        return toDetailDto(product);
+    public PageResponse<AdminProductSummaryDto> listForAdmin(ProductStatus status, String query, int page, Integer pageSize) {
+        int size1 = pageSize == null ? DEFAULT_PAGE_SIZE : Math.min(pageSize, MAX_PAGE_SIZE);
+        Page<AdminProductSummaryDto> result = productRepository.searchForAdmin(
+            status, query, PageRequest.of(Math.max(page, 0), size1, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+        return PageResponse.of(result);
     }
 
-    public ProductDetailDto create(ProductRequest request) {
+    public AdminProductDetailDto getDetailForAdmin(UUID id) {
+        Product product = productRepository.findDetailById(id)
+            .orElseThrow(() -> new NotFoundException("Product not found."));
+        return toAdminDetailDto(product);
+    }
+
+    public AdminProductDetailDto create(ProductRequest request) {
         Category category = requireCategory(request.categoryId());
         requireValidSize(category, request.sizeLabel());
 
@@ -83,7 +93,7 @@ public class ProductService {
         return getDetailForAdmin(product.getId());
     }
 
-    public ProductDetailDto update(UUID id, ProductRequest request) {
+    public AdminProductDetailDto update(UUID id, ProductRequest request) {
         Product product = productRepository.findDetailById(id)
             .orElseThrow(() -> new NotFoundException("Product not found."));
         Category category = requireCategory(request.categoryId());
@@ -111,7 +121,7 @@ public class ProductService {
         return getDetailForAdmin(id);
     }
 
-    public ProductDetailDto archive(UUID id) {
+    public AdminProductDetailDto archive(UUID id) {
         Product product = productRepository.findDetailById(id)
             .orElseThrow(() -> new NotFoundException("Product not found."));
         product.setStatus(ProductStatus.ARCHIVED);
@@ -145,6 +155,31 @@ public class ProductService {
             product.getPricePesewas(),
             availability.getAvailableQuantity(),
             status,
+            images
+        );
+    }
+
+    private AdminProductDetailDto toAdminDetailDto(Product product) {
+        List<ProductImageDto> images = product.getImages().stream()
+            .map(img -> new ProductImageDto(img.getUrl(), img.getThumbUrl(), img.getPosition()))
+            .toList();
+
+        return new AdminProductDetailDto(
+            product.getId(),
+            product.getTitle(),
+            product.getDescription(),
+            product.getCategory().getId(),
+            product.getCategory().getName(),
+            product.getBrand(),
+            product.getSizeLabel(),
+            product.getCondition(),
+            product.getColour(),
+            product.getEra(),
+            product.getFlaws(),
+            product.getSizingNotes(),
+            product.getPricePesewas(),
+            product.getStockQuantity(),
+            product.getStatus(),
             images
         );
     }

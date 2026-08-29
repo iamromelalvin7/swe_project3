@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.archive233.backend.catalog.dto.AdminProductSummaryDto;
 import com.archive233.backend.catalog.dto.ProductSummaryDto;
 
 public interface ProductRepository extends JpaRepository<Product, UUID> {
@@ -74,6 +75,41 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
         WHERE p.id = :id
         """)
     Optional<Product> findDetailById(@Param("id") UUID id);
+
+    /**
+     * Admin's own listing: unlike {@link #search}, every status (draft,
+     * published, archived) is visible — an admin managing the catalog needs
+     * to see everything, not just what customers can browse.
+     */
+    @Query(value = """
+        SELECT new com.archive233.backend.catalog.dto.AdminProductSummaryDto(
+            p.id, p.title, p.brand, p.sizeLabel, p.pricePesewas, p.stockQuantity, c.name,
+            pi.url, pi.thumbUrl, pa.availableQuantity, p.status,
+            CASE
+              WHEN p.stockQuantity = 0 THEN com.archive233.backend.catalog.AvailabilityStatus.SOLD_OUT
+              WHEN pa.availableQuantity = 0 THEN com.archive233.backend.catalog.AvailabilityStatus.RESERVED
+              ELSE com.archive233.backend.catalog.AvailabilityStatus.AVAILABLE
+            END)
+        FROM Product p
+        JOIN p.category c
+        LEFT JOIN ProductImage pi ON pi.product = p AND pi.position = 0
+        JOIN ProductAvailability pa ON pa.productId = p.id
+        WHERE (:status IS NULL OR p.status = :status)
+          AND (:query IS NULL OR lower(p.title) LIKE lower(concat('%', cast(:query as string), '%'))
+                               OR lower(p.brand) LIKE lower(concat('%', cast(:query as string), '%')))
+        """,
+        countQuery = """
+        SELECT count(p)
+        FROM Product p
+        WHERE (:status IS NULL OR p.status = :status)
+          AND (:query IS NULL OR lower(p.title) LIKE lower(concat('%', cast(:query as string), '%'))
+                               OR lower(p.brand) LIKE lower(concat('%', cast(:query as string), '%')))
+        """)
+    Page<AdminProductSummaryDto> searchForAdmin(
+        @Param("status") ProductStatus status,
+        @Param("query") String query,
+        Pageable pageable
+    );
 
     @Query("""
         SELECT DISTINCT p.brand FROM Product p

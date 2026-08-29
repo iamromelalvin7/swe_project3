@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth";
 // so "Sign out" — previously reachable only via the account icon — lives here instead.
 const NAV = [
   { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/products/new", label: "Products" },
+  { href: "/admin/products", label: "Products" },
   { href: "/admin/orders", label: "Orders" },
 ];
 

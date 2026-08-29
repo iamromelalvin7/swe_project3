@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.archive233.backend.catalog.dto.ProductDetailDto;
+import com.archive233.backend.catalog.dto.AdminProductDetailDto;
+import com.archive233.backend.catalog.dto.AdminProductSummaryDto;
 import com.archive233.backend.catalog.dto.ProductImageDto;
 import com.archive233.backend.catalog.dto.ProductRequest;
+import com.archive233.backend.common.PageResponse;
 
 import jakarta.validation.Valid;
 
@@ -35,18 +38,33 @@ public class AdminProductController {
         this.productImageService = productImageService;
     }
 
+    @GetMapping
+    public PageResponse<AdminProductSummaryDto> list(
+        @RequestParam(required = false) ProductStatus status,
+        @RequestParam(required = false) String q,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(required = false) Integer pageSize
+    ) {
+        return productService.listForAdmin(status, q, page, pageSize);
+    }
+
+    @GetMapping("/{id}")
+    public AdminProductDetailDto get(@PathVariable UUID id) {
+        return productService.getDetailForAdmin(id);
+    }
+
     @PostMapping
-    public ResponseEntity<ProductDetailDto> create(@Valid @RequestBody ProductRequest request) {
+    public ResponseEntity<AdminProductDetailDto> create(@Valid @RequestBody ProductRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.create(request));
     }
 
     @PutMapping("/{id}")
-    public ProductDetailDto update(@PathVariable UUID id, @Valid @RequestBody ProductRequest request) {
+    public AdminProductDetailDto update(@PathVariable UUID id, @Valid @RequestBody ProductRequest request) {
         return productService.update(id, request);
     }
 
     @PatchMapping("/{id}/archive")
-    public ProductDetailDto archive(@PathVariable UUID id) {
+    public AdminProductDetailDto archive(@PathVariable UUID id) {
         return productService.archive(id);
     }
 

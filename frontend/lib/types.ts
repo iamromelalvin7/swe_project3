@@ -1,5 +1,7 @@
 export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "SOLD_OUT";
 
+export type ProductStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
 export type ProductCondition = "NEW_WITH_TAGS" | "EXCELLENT" | "GOOD" | "FAIR";
 
 export type SizeGroup = "APPAREL" | "WAIST" | "FOOTWEAR" | "ONE_SIZE";
@@ -39,6 +41,40 @@ export type ProductDetail = {
   pricePesewas: number;
   availableQuantity: number;
   status: AvailabilityStatus;
+  images: ProductImage[];
+};
+
+export type AdminProductSummary = {
+  id: string;
+  title: string;
+  brand: string;
+  sizeLabel: string;
+  pricePesewas: number;
+  stockQuantity: number;
+  categoryName: string;
+  primaryImageUrl: string | null;
+  primaryThumbUrl: string | null;
+  availableQuantity: number;
+  status: ProductStatus;
+  availability: AvailabilityStatus;
+};
+
+export type AdminProductDetail = {
+  id: string;
+  title: string;
+  description: string | null;
+  categoryId: string;
+  categoryName: string;
+  brand: string;
+  sizeLabel: string;
+  condition: ProductCondition;
+  colour: string | null;
+  era: string | null;
+  flaws: string | null;
+  sizingNotes: string | null;
+  pricePesewas: number;
+  stockQuantity: number;
+  status: ProductStatus;
   images: ProductImage[];
 };
 
