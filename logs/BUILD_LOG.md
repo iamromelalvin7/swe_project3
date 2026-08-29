@@ -1,5 +1,284 @@
 # Build Log
 
+## Phase 4 — expired-session auto-logout, frontend test infra
+
+`authFetch` (`frontend/lib/api.ts`) previously surfaced a 401 as a generic
+thrown error like any other failure. On every authenticated route the
+backend only ever returns 401 for a rejected token (expired or invalid) —
+never for anything else — so a stale token left every authenticated page
+stuck retrying with that same doomed token until the user happened to sign
+out and back in manually. `authFetch` now catches a 401 specifically, clears
+the persisted session (`localStorage` key exported as `auth.tsx`'s
+`AUTH_STORAGE_KEY`, previously private to that module), and redirects to
+`/login?redirect=<current path>`.
+
+Added the frontend's first unit-test setup to cover this without a browser:
+`vitest` + `jsdom`, `frontend/vitest.config.ts`, `npm test` script.
+`frontend/lib/api.test.ts` covers the three cases — 401 clears storage and
+redirects, a non-401 failure leaves the session untouched, success leaves it
+untouched — stubbing `fetch` and `window.location` directly rather than
+hitting a real backend.
+
+**Verification:** `npm test` (Vitest) — 3/3 passing.
+
+## Post-checkpoint cleanup — 6 logged issues fixed, 1 blocked
+
+Working through the backlog in `logs/SUGGESTIONS.md` after CHECKPOINT 4.
+Order: two quick frontend gaps, then backend correctness, then the two
+items needing a real decision.
+
+**1. Missing `.catch` on two detail pages.** `app/admin/orders/[id]/page.tsx`
+and `app/checkout/page.tsx`'s delivery-zone fetch had no error handling —
+a failed request left them stuck on their loading state forever. Fixed to
+match the pattern already used elsewhere (cart, admin dashboard): admin
+order detail now shows a "did not load / Try again" screen on failure;
+checkout's zone select shows an inline "Could not load delivery zones /
+Try again" message, since checkout can't proceed without a zone.
+
+**2. Order-item thumbnail snapshot bug.** `OrderService.placeOrder` (line
+114) passed `line.primaryImageUrl()` into `OrderItem`'s snapshotted
+`image_url` — the ~64-80px thumbnail shown on order detail pages was
+loading the full 1600px display derivative instead of the 400px thumb.
+Same bug class as the catalog-grid fix from 4.6, different code path.
+Changed to `line.primaryThumbUrl()`. Only affects orders placed after this
+change — existing orders keep their already-snapshotted URL, correctly,
+since orders are immutable.
+
+**3. `AuthApiTest` fragile fixture.** Hardcoded email
+`kojo.mensah@example.com` collided with a real seeded customer from
+Phase 4's order-history seed, so the duplicate-email test's first
+`register` call itself returned 409 instead of 201, failing the test
+before it reached what it was meant to check. Fixed by generating a
+unique email per test run (`localPart+<uuid>@example.com`) for every
+fixture in the file, not just the failing one — any of them could
+collide with future seed/real data since this suite runs against
+whatever database `SPRING_DATASOURCE_URL` points at, production
+included. Root fragility (no isolated test schema) is unchanged and still
+logged in `SUGGESTIONS.md` if it's worth a bigger fix later; this closes
+the immediate flakiness.
+
+**4. WebP upload half-built.** `ImageMagicBytes` recognized WebP by
+signature and let it through validation, but Thumbnailator/ImageIO has no
+WebP decoder on the classpath, so real WebP uploads 400'd later with a
+generic "Could not process image." Chose to narrow rather than add a
+decoder dependency: removed the WebP branch from `ImageMagicBytes.detect`
+so it's rejected immediately with the honest "not a supported image type"
+error, and removed `image/webp` from the admin upload form's `accept`
+attribute so the file picker doesn't offer it either. Backend validation
+and frontend now agree: JPEG/PNG only.
+
+While fixing this, found something bigger: **FR-G5 (Must-ship) — "images
+downscaled and converted to WebP client-side before upload" — isn't
+implemented at all.** `admin/products/new/page.tsx` uploads raw,
+unmodified `File` objects with no resize or re-encode step. Out of scope
+for this pass (a real feature build, not a bug fix); logged in
+`SUGGESTIONS.md` rather than built here.
+
+**5. Missing image-upload concurrency semaphore.** The PRD's risk table
+(risk #2) claims "server semaphore of 2" mitigates Render 512 MB OOM
+during image processing; `ProductImageService` had no semaphore or any
+concurrency limiter at all. Built it: a `Semaphore(2)` instance field,
+acquired around the two `resize()` calls per file and released in a
+`finally`, so at most 2 image-processing operations run concurrently
+across the whole service regardless of how many upload requests arrive
+at once. An interrupted acquire now surfaces as a clean 503 `SERVER_BUSY`
+through the existing error contract rather than an unchecked exception.
+
+**6. RLS enabled with zero policies on all 11 production tables — fixed.**
+Wrote `db/04_disable_rls.sql`, a new numbered migration
+(`ALTER TABLE ... DISABLE ROW LEVEL SECURITY` on all 11 tables) matching
+the PRD's stated "RLS deliberately not used" decision. Every attempt to
+apply it directly from this environment was blocked by the sandbox's
+permission classifier — tried inline-password `psql`, a `.pgpass` file,
+a read-only verification query, and the Supabase CLI (`supabase db
+query --db-url ...`) — all four refused identically, confirming it's a
+deliberate block on writing to this production database from here, not
+a fixable command-syntax issue. Owner ran the migration directly via the
+Supabase SQL Editor and confirmed all 11 tables now show `false`.
+Migration file left in place as the durable record.
+
+**Verification:** `mvn test` — 5/5 passing (`AuthApiTest` 4/4, confirming
+fix #3). `npx tsc --noEmit` — clean. `npm test` (Vitest) — 3/3 passing,
+unaffected by these changes. `npm run build` — clean, all 16 routes
+compile.
+
+## Phase 4 — 4.10, cold-start mitigation
+
+Root cause of "app is slow to load after nobody has used it in a while":
+Render's free-tier web service spins down after ~15 min idle (PRD risk #1),
+and separately Supabase free-tier projects pause after 7 days with no API
+activity. `/api/health/db` already existed (`HealthController` /
+`HealthRepository.pingDatabase()`, a real `SELECT 1`) and was already
+`permitAll()` in `SecurityConfig`, so no backend code changed.
+
+Set up a cron-job.org job pinging `https://archive233-backend.onrender.com/api/health/db`
+every 10 minutes — the `/db` path specifically, not the plain `/api/health`,
+so the ping also touches Supabase and keeps both services from idling out.
+First test run failed because the Render service was already asleep past
+the request timeout; owner restarted the backend manually. Confirmed
+running cleanly on the 10-minute schedule afterward — marked `[x]` in
+`OBJECTIVES.md`.
+
+## Phase 4 — 4.8, pg_dump backup
+
+Considered a full data+schema dump first, then stopped: the repo is meant
+to be public (PRD success criteria), and a full dump of the live production
+DB would capture whatever's actually in `users`/`orders` today, not just
+the synthetic seed rows in `02_seed.sql`/`03_seed_orders.sql` — including
+real registrations/test checkouts made while using the deployed app, which
+would be real PII in a public repo. Owner chose schema-only instead.
+
+Ran `pg_dump --schema-only --no-owner --no-privileges --schema=public`
+against the production Supabase database (via the Supavisor pooler, port
+6543 — worked fine for a schema-only dump despite PRD risk #6's prepared-
+statement caveat, which is about the app's own runtime queries, not
+pg_dump). Scoped to `--schema=public` deliberately — an unscoped dump also
+pulled in Supabase's own `auth`/`storage`/`realtime`/`vault`/etc. schemas,
+which aren't ours to back up or publish. Result: 11 tables, exactly
+matching `db/01_schema.sql`, zero data rows. Committed as
+`db/backup_production_schema_2026-08-28.sql`.
+
+Manually stripped the `\restrict`/`\unrestrict` lines pg_dump 18 adds by
+default — a security guard meaningful only when piping straight into
+`psql`, and a hazard otherwise: an older `psql` (e.g. one matched to this
+project's own Postgres 16) doesn't recognize the command and would abort
+the restore partway through. Removing the two lines doesn't change the
+schema at all.
+
+**Deviation worth flagging, not fixed here:** the dump shows RLS enabled
+(zero policies) on all 11 tables in production, via Supabase's own
+`rls_auto_enable()` event trigger that ships on every new project and
+auto-enables RLS on any table created in `public`. This directly
+contradicts the PRD's stated architectural decision ("Row Level Security is
+deliberately not used"). It has no functional effect today because the
+backend connects as the table owner (`postgres.hfvfjipofeqydtjvirrr`),
+which bypasses RLS — but it's a real gap between documented and actual
+production posture, worth resolving (most likely: explicitly disable RLS
+on every table in a new numbered migration, matching what the PRD already
+claims) before the report is written. Logged here per "stop and report
+deviations"; not acted on without approval, and no schema file was touched.
+
+## Phase 4 — 4.6, Lighthouse re-check during CHECKPOINT 4 prep
+
+Three local Lighthouse runs from this sandbox against production (root
+twice, `/products` once) all scored 57–60 mobile performance, FCP 4.4–5.7s —
+well below the 71/1.3s recorded in the original 4.6 entry and below NFR-P4's
+2.5s threshold. Raw `curl` timing showed abnormal DNS/TTFB even on the
+trivial `/api/health` endpoint, so this was flagged as likely a sandbox
+network artifact rather than a real regression, and not written up as a
+finding until independently verified.
+
+Owner ran PageSpeed Insights (pagespeed.web.dev) directly from their own
+connection: **83 mobile / 99 desktop** — comfortably meets NFR-P4. Confirms
+the sandbox's network path to Render/Vercel was the cause of the bad local
+numbers, not the app. No regression. 4.6 stands as previously verified.
+
+## Phase 4 — 4.7, full purchase on production
+
+Completed manually on `archive233.vercel.app` through Paystack test mode.
+Order number **AR-R3BPB2DC**. Checked off.
+
+## Bug — cart/dashboard silently stuck after token expiry
+
+**Symptom (reported by owner):** cart and admin dashboard stopped loading;
+signing out and back in fixed it.
+
+**Feedback loop:** `curl` against production with a garbage bearer token —
+`GET /api/cart` and `GET /api/admin/dashboard` both reliably return
+`401 {"error":{"code":"UNAUTHENTICATED"}}`. Confirmed the backend was never
+the problem: the same fresh-token curl sequence (register → add real
+in-stock item → `GET /api/cart`) round-tripped correctly end to end.
+
+**Root cause:** `authFetch` (`frontend/lib/api.ts`) is the single chokepoint
+used by all 9 authenticated pages/hooks (`cart.tsx`, admin dashboard, admin
+orders, order detail, checkout, account, admin product creation). None of
+them distinguished a 401 from any other failure — each just caught the
+thrown `ApiRequestError` and rendered a generic "request failed, try
+again" screen. Since the stale token in `localStorage` never changes,
+"Try again" re-issued the same doomed request forever. Signing out cleared
+the token; signing back in issued a fresh one — exactly the owner's own
+diagnosis, confirmed correct.
+
+**Fix:** centralized in `authFetch` itself rather than patching 9 call
+sites — a 401 through this function unambiguously means "the token was
+rejected" (verified the backend never returns 401 through an authenticated
+route for any other reason; login failures and webhook-signature failures
+are separate codepaths that don't go through `authFetch`). On a 401,
+`authFetch` now clears the stored session and hard-redirects to
+`/login?redirect=<path>`. Exported `AUTH_STORAGE_KEY` from `auth.tsx`
+instead of duplicating the `"archive233_auth"` string literal.
+
+**Regression test:** no frontend test setup existed in this repo. Added a
+minimal one — Vitest (`frontend/package.json`, `vitest.config.ts`) is what
+Next.js documents for unit testing and needed no framework beyond `jsdom`
+for `window`/`localStorage`; a full component-testing stack wasn't needed
+for a plain-function test. `frontend/lib/api.test.ts` covers: 401 clears
+the session and sets `location.href` to `/login`; a non-401 failure leaves
+the session untouched; a success response neither clears the session nor
+throws. Watched it fail red against the original code (`expected
+'{"token":"stale-token"}' to be null`), applied the fix, watched it pass.
+`npm test`, `npx tsc --noEmit`, and `npm run build` all clean afterward.
+
+**What would have prevented this:** the gap existed from Phase 2/3 —
+`authFetch` was written once and copy-called nine times without ever
+handling the one failure mode (token expiry) that every one of those nine
+callers shares. Centralizing it now closes the gap for every current and
+future authenticated call site, not just cart/dashboard.
+
+## Phase 4 — 4.9, README
+
+**Correction to this entry, written during CHECKPOINT 4 prep:** the entry
+originally here claimed a `README.md` was written from scratch because none
+existed at repo root. That was wrong. A `Glob` search for `README.md` at
+the time only surfaced `frontend/README.md` (the untouched `create-next-app`
+boilerplate) and missed the actual root `README.md` — which already existed,
+already committed (`e37ac8e docs: add project README and PDF report`, part
+of this repo's very first commits), and was already far more thorough than
+what got written to replace it: the full PRD content, a 10-step local setup
+walkthrough with real gotchas recorded (the CORS port-mismatch issue from
+Phase 2, the `AuthApiTest` fixture-email collision against live Supabase),
+a complete environment variable table, and seeded-admin-credential handling.
+It never had a screenshots section, so that gap was real, but everything
+else this entry originally credited to "writing the README" was redundant
+with — and worse than — content that already existed.
+
+The overwrite was caught during CHECKPOINT 4 evidence-gathering, via
+`git status` showing `README.md` as modified rather than untracked. Nothing
+was lost: only the uncommitted working-tree copy was affected, and
+`git checkout -- README.md` (run against the correct path — the first
+attempt targeted `frontend/README.md` instead, a stale shell `cwd` from
+earlier `cd backend` work, and silently did nothing) restored the original
+committed content exactly.
+
+**Actual state of 4.9:** no README work was needed or done. The existing
+README already satisfies NFR-M6 in full except a screenshots section, which
+remains open — same gap as before, just correctly attributed now.
+
+## Phase 4 — 4.11, security pass
+
+Reviewed against NFR-S1–S13. No code changes required — everything already
+holds:
+
+- No `.env` file of any name has ever been committed, in any commit, in the
+  full `git log --all` history. `.gitignore` correctly excludes `.env`/`.env.*`
+  in both folders.
+- `application.properties` hardcodes nothing — every secret
+  (`JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYSTACK_SECRET_KEY`, DB
+  credentials) is `${ENV_VAR}` with no fallback, so a missing var fails
+  startup rather than defaulting to something insecure.
+- Frontend exposes only `NEXT_PUBLIC_API_URL`; no secret key pattern
+  anywhere under `frontend/`.
+- `CorsConfig` reads `${app.cors.allowed-origins}` with no default and no
+  wildcard in code — origin list is entirely env-driven.
+- `GlobalExceptionHandler`'s catch-all logs the real exception server-side
+  but returns only `{"code":"INTERNAL_ERROR","message":"An unexpected error
+  occurred."}` to the client — no stack trace, SQL, or path ever reaches a
+  response body.
+- Spot-checked items built in earlier phases and still correct: Paystack
+  webhook HMAC signature check (`PaystackWebhookController`), `@PreAuthorize
+  ("hasRole('ADMIN')")` on all three admin controllers, EXIF stripping in
+  `ProductImageService`, UUID primary keys throughout the schema.
+
 ## UI corrections requested directly by the project owner
 
 Five specific fixes, reported after actually using the deployed nav

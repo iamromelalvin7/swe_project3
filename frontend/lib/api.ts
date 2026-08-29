@@ -1,3 +1,5 @@
+import { AUTH_STORAGE_KEY } from "./auth";
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type ApiError = {
@@ -45,13 +47,29 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return res.json() as Promise<T>;
 }
 
-/** Same as apiFetch, with the caller's bearer token attached. */
-export function authFetch<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  return apiFetch<T>(path, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...init?.headers,
-    },
-  });
+/**
+ * Same as apiFetch, with the caller's bearer token attached. A 401 here
+ * always means the token itself was rejected (expired or invalid) — the
+ * backend never uses 401 for anything else on an authenticated route — so
+ * we treat it as a forced sign-out rather than a generic failure. Without
+ * this, a stale token leaves every authenticated page stuck retrying with
+ * the same doomed token until the user happens to sign out and back in.
+ */
+export async function authFetch<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+  try {
+    return await apiFetch<T>(path, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...init?.headers,
+      },
+    });
+  } catch (err) {
+    if (err instanceof ApiRequestError && err.status === 401 && typeof window !== "undefined") {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      const redirect = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?redirect=${redirect}`;
+    }
+    throw err;
+  }
 }

@@ -10,7 +10,8 @@ export type AuthUser = {
   role: "CUSTOMER" | "ADMIN";
 };
 
-const STORAGE_KEY = "archive233_auth";
+export const AUTH_STORAGE_KEY = "archive233_auth";
+const STORAGE_KEY = AUTH_STORAGE_KEY;
 
 type AuthContextValue = {
   user: AuthUser | null;
