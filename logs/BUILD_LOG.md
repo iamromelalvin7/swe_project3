@@ -41,6 +41,19 @@ afterward (no delete-image or delete-product endpoint exists — same
 non-destructive pattern already used for earlier test rows in this
 database).
 
+## Post-Phase-4 — sign-in always lands on the storefront
+
+Follow-up to the redirect fix below: the project owner wants signing in to
+always show the storefront first, not wherever a `?redirect=` param pointed
+(cart, checkout, a specific order, an admin route, etc.). `AuthForm`'s
+sign-in path now always pushes to `/products`, ignoring `redirect` entirely.
+Registering is unchanged — still returns to `redirect` when set, since
+account creation is frequently started mid-checkout ("you need an account
+to hold a piece") where returning to that context still matters.
+
+**Verification:** `mvn test` — 12/12. `npx tsc --noEmit` — clean.
+`npm run build` — clean, 17 routes. `npm test` — 3/3.
+
 ## Post-Phase-4 — header: sign-in redirect bug, sign-in button, store/dashboard toggle
 
 Traced the reported bug ("logging in as a customer doesn't land on

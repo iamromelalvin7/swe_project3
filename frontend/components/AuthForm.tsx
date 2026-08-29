@@ -42,7 +42,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
         ),
       });
       auth.login(response);
-      router.push(searchParams.get("redirect") ?? "/products");
+      // Signing in always lands on the storefront first, regardless of any
+      // ?redirect= param — registering (often started mid-checkout, e.g.
+      // "you need an account to hold a piece") still returns to that context.
+      router.push(isRegister ? searchParams.get("redirect") ?? "/products" : "/products");
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setFormError(err.error.message);
