@@ -30,6 +30,69 @@ login page itself still renders correctly; the admin toggle shows "Store"
 in `/admin/dashboard` and "Dashboard" in `/products`; the customer toggle
 shows "Store" only while on `/account`.
 
+## Post-Phase-4 — admin photo resize and reposition
+
+Two things were asked for: letting admins resize an uploaded photo and
+position it well, and reordering a product's photos. Neither existed —
+FR-G5's client-side step blindly contain-fit every photo with no crop
+control, and there was no way to reorder or reprioritize existing photos at
+all (only append new ones).
+
+- `frontend/components/ImageCropEditor.tsx` (new): a pan/zoom cropper framed
+  to the exact 3:4 the product grid/gallery display at
+  (`aspect-[3/4]`) — the zoom slider is "resize", the drag is "position...
+  to be viewed". Confirming bakes the framed region into a fixed-resolution
+  WebP via a new `cropAndConvertToWebp` in `lib/images.ts`, replacing the
+  old blind `downscaleAndConvertToWebp` (removed — this supersedes it
+  entirely, nothing else used it).
+- `frontend/components/ImageDropzone.tsx`: selected/dropped files now queue
+  through the crop editor one at a time instead of auto-processing.
+- Backend: `PUT /api/admin/products/{id}/images/order` (new) reassigns
+  every existing photo's `position` to an admin-submitted order — rejects
+  anything that isn't exactly the product's current photo set. `ProductImageDto`
+  gained an `id` field (previously only `url`/`thumbUrl`/`position`) since a
+  stable identifier is what the frontend needs to reference a specific photo.
+- `frontend/app/admin/products/[id]/edit/page.tsx`: existing photos now have
+  move-earlier/move-later arrow buttons, saving immediately via the new
+  endpoint (still can't be removed — no delete-image endpoint exists yet,
+  unchanged from before).
+
+**Two real bugs found by testing this before committing, not just
+reviewing it** — both would have shipped broken:
+
+1. `product_images` has `UNIQUE(product_id, position)`. Writing final
+   positions directly during a reorder collides mid-flush on anything but a
+   no-op (e.g. swapping two photos tries to give one of them the position
+   the other hasn't vacated yet). Fixed with a two-phase update: park every
+   photo at a disjoint negative position first, flush, then write the real
+   positions. Caught by a new `ProductImageReorderTest` — an actual swap,
+   attempted, failed with a Postgres constraint violation the first time.
+2. `@OrderBy("position ASC")` only sorts a `@OneToMany` collection when
+   Hibernate first loads it from the database — it does **not** re-sort an
+   already-loaded collection after positions change later in the same
+   persistence context, which is exactly what `reorderImages` does right
+   before calling back into `getDetailForAdmin` in the same request. The
+   response would have come back with stale ordering. Fixed by sorting
+   explicitly by `position` wherever `ProductImageDto`s are built, rather
+   than trusting collection iteration order.
+3. (Found and fixed during manual verification, not by the automated test)
+   `ImageCropEditor` created its blob URL via `useMemo` and revoked it in an
+   effect cleanup — harmless in production, but React 18 Strict Mode's
+   dev-only double-invoke (mount → simulated unmount → remount) revokes the
+   one and only memoized URL on the simulated unmount, and `useMemo` never
+   regenerates it, permanently breaking the preview in local dev. Fixed by
+   creating the URL inside the effect itself, so the double-invoke
+   naturally produces a fresh one.
+
+**Verified live**, not just built: local backend against the real database,
+Playwright driving an actual file through the crop editor (zoom, drag-pan,
+confirm) and clicking through the reorder buttons — read-only against real
+product data, plus a dedicated `ProductImageReorderTest` (rolled back,
+never touches Supabase Storage) for the reorder logic itself.
+
+**Verification:** `mvn test` — 9/9. `npx tsc --noEmit` — clean.
+`npm run build` — clean, 17 routes. `npm test` — 3/3.
+
 ## Post-Phase-4 — admin product management screen
 
 Flagged by the project owner: admin had no way to see the catalog

@@ -67,6 +67,10 @@ public class ProductImage {
         return position;
     }
 
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }

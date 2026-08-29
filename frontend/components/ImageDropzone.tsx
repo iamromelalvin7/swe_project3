@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { downscaleAndConvertToWebp } from "@/lib/images";
+import { ImageCropEditor } from "@/components/ImageCropEditor";
 
 export type PendingImage = { blob: Blob; previewUrl: string };
 
 /**
- * The photo picker shared by the new-product and edit-product forms.
- * Every selected file is downscaled and re-encoded to WebP client-side
- * (FR-G5) before it's added to `images`. `maxImages` lets the edit page
- * cap this at 6 minus however many photos the product already has, since
- * there's no way to remove an already-uploaded photo (no delete-image
+ * The photo picker shared by the new-product and edit-product forms. Every
+ * selected file is queued through {@link ImageCropEditor} — the admin
+ * frames (pans/zooms) each one to the product grid's 3:4 display before it's
+ * added to `images` as WebP (FR-G5's client-side conversion, now with a
+ * chosen crop instead of a blind contain-fit). `maxImages` lets the edit
+ * page cap this at 6 minus however many photos the product already has,
+ * since there's no way to remove an already-uploaded photo (no delete-image
  * endpoint exists).
  */
 export function ImageDropzone({
@@ -30,20 +32,22 @@ export function ImageDropzone({
   startPosition?: number;
 }) {
   const [dragging, setDragging] = useState(false);
+  const [queue, setQueue] = useState<File[]>([]);
 
-  async function onFiles(list: FileList | null) {
+  function onFiles(list: FileList | null) {
     if (!list) return;
     setImageError(null);
     const remaining = Math.max(0, maxImages - images.length);
-    const incoming = Array.from(list).slice(0, remaining);
-    for (const file of incoming) {
-      try {
-        const blob = await downscaleAndConvertToWebp(file);
-        setImages((prev) => (prev.length >= maxImages ? prev : [...prev, { blob, previewUrl: URL.createObjectURL(blob) }]));
-      } catch {
-        setImageError(`Could not process "${file.name}".`);
-      }
-    }
+    setQueue((prev) => [...prev, ...Array.from(list).slice(0, remaining - prev.length)]);
+  }
+
+  function onCropConfirm(blob: Blob) {
+    setImages((prev) => (prev.length >= maxImages ? prev : [...prev, { blob, previewUrl: URL.createObjectURL(blob) }]));
+    setQueue((prev) => prev.slice(1));
+  }
+
+  function onCropCancel() {
+    setQueue((prev) => prev.slice(1));
   }
 
   function removeImage(index: number) {
@@ -55,6 +59,8 @@ export function ImageDropzone({
 
   return (
     <div>
+      {queue[0] && <ImageCropEditor file={queue[0]} onCancel={onCropCancel} onConfirm={onCropConfirm} />}
+
       <div
         onDragOver={(e) => {
           e.preventDefault();

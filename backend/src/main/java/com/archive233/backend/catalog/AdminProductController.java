@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.archive233.backend.catalog.dto.AdminProductDetailDto;
 import com.archive233.backend.catalog.dto.AdminProductSummaryDto;
+import com.archive233.backend.catalog.dto.ImageOrderRequest;
 import com.archive233.backend.catalog.dto.ProductImageDto;
 import com.archive233.backend.catalog.dto.ProductRequest;
 import com.archive233.backend.common.PageResponse;
@@ -68,10 +69,15 @@ public class AdminProductController {
         return productService.archive(id);
     }
 
+    @PutMapping("/{id}/images/order")
+    public AdminProductDetailDto reorderImages(@PathVariable UUID id, @Valid @RequestBody ImageOrderRequest request) {
+        return productService.reorderImages(id, request.imageIds());
+    }
+
     @PostMapping("/{id}/images")
     public List<ProductImageDto> uploadImages(@PathVariable UUID id, @RequestParam("files") List<MultipartFile> files) {
         return productImageService.upload(id, files).stream()
-            .map(img -> new ProductImageDto(img.getUrl(), img.getThumbUrl(), img.getPosition()))
+            .map(img -> new ProductImageDto(img.getId(), img.getUrl(), img.getThumbUrl(), img.getPosition()))
             .toList();
     }
 }

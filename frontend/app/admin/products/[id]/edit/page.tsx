@@ -25,6 +25,8 @@ export default function EditProductPage() {
   const [saving, setSaving] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [reorderError, setReorderError] = useState<string | null>(null);
 
   const load = () => {
     if (user?.role !== "ADMIN") return;
@@ -119,6 +121,29 @@ export default function EditProductPage() {
     }
   }
 
+  async function moveImage(index: number, direction: -1 | 1) {
+    if (!user || !product) return;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= product.images.length) return;
+
+    const reordered = [...product.images];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+
+    setReordering(true);
+    setReorderError(null);
+    try {
+      const updated = await authFetch<AdminProductDetail>(`/api/admin/products/${product.id}/images/order`, user.token, {
+        method: "PUT",
+        body: JSON.stringify({ imageIds: reordered.map((img) => img.id) }),
+      });
+      setProduct(updated);
+    } catch (err) {
+      setReorderError(err instanceof ApiRequestError ? err.error.message : "Could not reorder photos.");
+    } finally {
+      setReordering(false);
+    }
+  }
+
   async function archive() {
     if (!user || !product) return;
     if (!window.confirm(`Archive "${product.title}"? It will no longer be visible to customers.`)) return;
@@ -187,8 +212,8 @@ export default function EditProductPage() {
                   Current photos ({existingCount})
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  {product.images.map((img) => (
-                    <div key={img.position} className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-rule bg-white">
+                  {product.images.map((img, i) => (
+                    <div key={img.id} className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-rule bg-white">
                       <img src={img.thumbUrl} alt="" className="h-full w-full object-cover" />
                       <div
                         className={`absolute left-0 top-0 px-1.5 py-0.5 font-mono text-[10px] ${
@@ -197,10 +222,35 @@ export default function EditProductPage() {
                       >
                         {img.position + 1}
                       </div>
+                      <div className="absolute bottom-1 right-1 flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveImage(i, -1)}
+                          disabled={reordering || i === 0}
+                          aria-label="Move earlier"
+                          className="flex h-5 w-5 items-center justify-center bg-cream/90 text-[11px] hover:opacity-70 disabled:opacity-30"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveImage(i, 1)}
+                          disabled={reordering || i === product.images.length - 1}
+                          aria-label="Move later"
+                          className="flex h-5 w-5 items-center justify-center bg-cream/90 text-[11px] hover:opacity-70 disabled:opacity-30"
+                        >
+                          →
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div className="mt-2 text-xs text-grey">Existing photos can&apos;t be removed here yet — only added to.</div>
+                {reorderError && (
+                  <div className="mt-2 font-mono text-[11px] uppercase tracking-[0.08em] text-signal">{reorderError}</div>
+                )}
+                <div className="mt-2 text-xs text-grey">
+                  Use the arrows to reorder — position 1 is primary. Existing photos can&apos;t be removed here yet, only added to.
+                </div>
               </div>
             )}
 

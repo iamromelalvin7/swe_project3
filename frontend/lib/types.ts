@@ -20,6 +20,7 @@ export type ProductSummary = {
 };
 
 export type ProductImage = {
+  id: string;
   url: string;
   thumbUrl: string;
   position: number;

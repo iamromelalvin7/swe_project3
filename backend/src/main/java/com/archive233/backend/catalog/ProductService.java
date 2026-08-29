@@ -1,8 +1,12 @@
 package com.archive233.backend.catalog;
 
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -121,6 +125,43 @@ public class ProductService {
         return getDetailForAdmin(id);
     }
 
+    /**
+     * Reassigns every existing photo's position to match {@code imageIds}'
+     * order (index 0 = primary). Rejects anything that isn't exactly this
+     * product's current photo set — a partial list would silently orphan
+     * the photos left out of it at whatever position they last had.
+     */
+    public AdminProductDetailDto reorderImages(UUID productId, List<UUID> imageIds) {
+        Product product = productRepository.findDetailById(productId)
+            .orElseThrow(() -> new NotFoundException("Product not found."));
+
+        List<ProductImage> images = product.getImages();
+        Set<UUID> currentIds = images.stream().map(ProductImage::getId).collect(Collectors.toSet());
+        if (imageIds.size() != images.size() || !new HashSet<>(imageIds).equals(currentIds)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+                "The image list must contain exactly this product's existing photos, each once.");
+        }
+
+        // Two-phase: `product_images` has a UNIQUE(product_id, position)
+        // constraint, so writing final positions directly can collide
+        // mid-flush on anything but a no-op reorder (e.g. swapping two
+        // photos tries to give one of them the position the other hasn't
+        // vacated yet, in whichever order Hibernate happens to flush the
+        // updates). Parking everything at a disjoint negative range first,
+        // flushing, then writing the real positions guarantees no
+        // intermediate row ever collides with another.
+        Map<UUID, ProductImage> byId = images.stream().collect(Collectors.toMap(ProductImage::getId, i -> i));
+        for (int i = 0; i < imageIds.size(); i++) {
+            byId.get(imageIds.get(i)).setPosition(-(i + 1));
+        }
+        productRepository.saveAndFlush(product);
+        for (int i = 0; i < imageIds.size(); i++) {
+            byId.get(imageIds.get(i)).setPosition(i);
+        }
+        productRepository.save(product);
+        return getDetailForAdmin(productId);
+    }
+
     public AdminProductDetailDto archive(UUID id) {
         Product product = productRepository.findDetailById(id)
             .orElseThrow(() -> new NotFoundException("Product not found."));
@@ -133,8 +174,14 @@ public class ProductService {
         ProductAvailability availability = availabilityRepository.findByProductId(product.getId())
             .orElseThrow(() -> new NotFoundException("Product not found."));
 
+        // @OrderBy only sorts a collection when Hibernate first loads it from
+        // the database — it does not keep an already-loaded collection
+        // re-sorted after positions change in the same persistence context
+        // (reorderImages does exactly that then calls back into this same
+        // method), so position order has to be enforced explicitly here.
         List<ProductImageDto> images = product.getImages().stream()
-            .map(img -> new ProductImageDto(img.getUrl(), img.getThumbUrl(), img.getPosition()))
+            .sorted(Comparator.comparingInt(ProductImage::getPosition))
+            .map(img -> new ProductImageDto(img.getId(), img.getUrl(), img.getThumbUrl(), img.getPosition()))
             .toList();
 
         AvailabilityStatus status = AvailabilityStatus.of(product.getStockQuantity(), availability.getAvailableQuantity());
@@ -160,8 +207,14 @@ public class ProductService {
     }
 
     private AdminProductDetailDto toAdminDetailDto(Product product) {
+        // @OrderBy only sorts a collection when Hibernate first loads it from
+        // the database — it does not keep an already-loaded collection
+        // re-sorted after positions change in the same persistence context
+        // (reorderImages does exactly that then calls back into this same
+        // method), so position order has to be enforced explicitly here.
         List<ProductImageDto> images = product.getImages().stream()
-            .map(img -> new ProductImageDto(img.getUrl(), img.getThumbUrl(), img.getPosition()))
+            .sorted(Comparator.comparingInt(ProductImage::getPosition))
+            .map(img -> new ProductImageDto(img.getId(), img.getUrl(), img.getThumbUrl(), img.getPosition()))
             .toList();
 
         return new AdminProductDetailDto(
