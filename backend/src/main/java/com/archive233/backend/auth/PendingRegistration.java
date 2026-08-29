@@ -1,20 +1,23 @@
-package com.archive233.backend.user;
+package com.archive233.backend.auth;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * A registration that hasn't been verified yet — no {@code users} row exists
+ * for it. Created or refreshed by {@code AuthService.register}, consumed
+ * (and deleted) by {@code AuthService.verifyEmail}.
+ */
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "pending_registrations")
+public class PendingRegistration {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,28 +35,30 @@ public class User {
     @Column(nullable = false)
     private String phone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role = Role.CUSTOMER;
+    @Column(name = "code_hash", nullable = false)
+    private String codeHash;
 
-    @Column(name = "default_address")
-    private String defaultAddress;
+    @Column(name = "expires_at", nullable = false)
+    private OffsetDateTime expiresAt;
+
+    @Column(nullable = false)
+    private int attempts;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at", insertable = false, updatable = false)
-    private OffsetDateTime updatedAt;
-
-    protected User() {
+    protected PendingRegistration() {
     }
 
-    public User(String email, String passwordHash, String fullName, String phone) {
+    public PendingRegistration(String email, String passwordHash, String fullName, String phone,
+                                String codeHash, OffsetDateTime expiresAt) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.phone = phone;
-        this.role = Role.CUSTOMER;
+        this.codeHash = codeHash;
+        this.expiresAt = expiresAt;
+        this.attempts = 0;
     }
 
     public UUID getId() {
@@ -88,23 +93,27 @@ public class User {
         this.phone = phone;
     }
 
-    public Role getRole() {
-        return role;
+    public String getCodeHash() {
+        return codeHash;
     }
 
-    public String getDefaultAddress() {
-        return defaultAddress;
+    public void setCodeHash(String codeHash) {
+        this.codeHash = codeHash;
     }
 
-    public void setDefaultAddress(String defaultAddress) {
-        this.defaultAddress = defaultAddress;
+    public OffsetDateTime getExpiresAt() {
+        return expiresAt;
     }
 
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
+    public void setExpiresAt(OffsetDateTime expiresAt) {
+        this.expiresAt = expiresAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
+    public int getAttempts() {
+        return attempts;
+    }
+
+    public void setAttempts(int attempts) {
+        this.attempts = attempts;
     }
 }

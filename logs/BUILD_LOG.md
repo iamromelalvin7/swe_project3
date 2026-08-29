@@ -1,5 +1,84 @@
 # Build Log
 
+## Post-Phase-4 — email verification and password reset (code complete, blocked on two manual steps)
+
+Requested: registration should no longer let anyone type any email and get
+added to the database — a code sent to the address, verified, only then is
+the account created (the pattern's actual name: email verification via a
+one-time code / "verify-then-create"). Same shape for forgot-password: an
+emailed link, followed to set a new password.
+
+This needed a provider decision only the project owner could make (sending
+real email requires a real account and API key) — asked, got **Resend**.
+
+**Schema proposed and written** (hard rule 1), not yet applied to production
+— `db/05_email_verification_and_password_reset.sql`: two new tables.
+`pending_registrations` stages a registration (hashed code + expiry +
+attempt count) with no `users` row created yet; `password_reset_tokens`
+holds a hashed, single-use, expiring token per reset request. Both hash
+their secret (SHA-256, not bcrypt — short-lived/attempt-limited, not
+password-grade) so a read of either table alone hands out nothing usable.
+
+**Backend, all new:**
+- `email/ResendEmailClient.java` — same minimal pattern as
+  `SupabaseStorageClient`: one `RestClient`, one method, no SDK dependency.
+- `auth/PendingRegistration(Repository)`, `auth/PasswordResetToken(Repository)`.
+- `AuthService`: `register` now stages a `PendingRegistration` and emails a
+  code instead of creating a `User` — a second attempt with the same
+  unverified email replaces the pending row rather than erroring.
+  `verifyEmail` is the only place a self-service `User` row gets created:
+  checks expiry, checks an attempt cap (5) before checking the code itself
+  (so a wrong-code response doesn't also update a counter unboundedly),
+  compares the SHA-256 of the submitted code. `resendCode`,
+  `forgotPassword` (always the same response whether or not the email has
+  an account — no enumeration), `resetPassword` (single-use, expiring
+  token) follow the equivalent pattern.
+- `AuthController`: `register` now returns a plain ack (no token — no
+  account exists yet), new `/verify-email`, `/resend-code`,
+  `/forgot-password`, `/reset-password`. `SecurityConfig` permits all five;
+  `AuthRateLimitFilter` now guards all five too — verify-email especially,
+  since an unthrottled 6-digit code is only as strong as an attacker's
+  patience (the per-`PendingRegistration` attempt cap is a second,
+  IP-independent layer on top of the existing per-IP limiter).
+- `AuthApiTest` rewritten for the new contract (register returns 200 + a
+  message, not 201 + a token; tests that only care about login/duplicate-
+  email behavior create the `User` directly via the repository rather than
+  going through register+verify). `AuthRateLimitTest` updated similarly.
+  `backend/.../support/FakeEmailConfig.java` (new, shared) captures sent
+  email instead of calling the real Resend API — same hand-written-subclass-
+  via-`@Primary` approach as `ProductImageReplaceTest`'s storage fake, for
+  the same JDK/Mockito reason.
+
+**Frontend, all new:** `AuthForm`'s register path now stages the account and
+routes to `/verify-email?email=...` (carrying through any `?redirect=`)
+instead of logging in directly; `/verify-email` (code entry + resend),
+`/forgot-password` (email entry, generic "if that email exists" response),
+`/reset-password` (token from the query string, new password) — all
+verified to compile and build cleanly (`tsc`, `next build`, 20 routes now),
+but not screens from the approved design export since this whole feature
+wasn't in it; built with the same tokens/patterns as the existing
+login/register screens rather than inventing new visual language.
+
+**Blocked on two things only the project owner can do, and confirmed
+blocked, not assumed:**
+1. **Apply the migration.** Same as `04_disable_rls.sql` before it — this
+   sandbox's writes to the production Supabase database are blocked by its
+   own permission classifier. Attempted `mvn test` against the live
+   database with these new entities mapped in and got exactly the expected
+   failure: `Schema-validation: missing table [password_reset_tokens]` —
+   the app (and every test, not just the new ones) can't even start until
+   `db/05_email_verification_and_password_reset.sql` is run via the
+   Supabase SQL Editor.
+2. **Add real Resend credentials** to `backend/.env`: `RESEND_API_KEY` (from
+   a Resend account) and `RESEND_FROM_EMAIL` (Resend's own sandbox address
+   works with no domain verification to start, e.g.
+   `Archive 233 <onboarding@resend.dev>`).
+
+Until both are done, `mvn test` cannot run at all (not a regression in this
+change — the whole suite is blocked at Spring context startup), so the
+usual "verified live" / full-suite-passing bar for this session doesn't
+apply yet. Compilation (`mvn compile`, `mvn test-compile`) is clean.
+
 ## Post-Phase-4 — admin scroll containment + mobile bottom nav
 
 Two related complaints: the whole admin page scrolled together (header and

@@ -35,17 +35,27 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setFieldErrors({});
     setSubmitting(true);
     try {
-      const response = await apiFetch<AuthUser>(isRegister ? "/api/auth/register" : "/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify(
-          isRegister ? { fullName, email, phone, password } : { email, password }
-        ),
-      });
-      auth.login(response);
-      // Signing in always lands on the storefront first, regardless of any
-      // ?redirect= param — registering (often started mid-checkout, e.g.
-      // "you need an account to hold a piece") still returns to that context.
-      router.push(isRegister ? searchParams.get("redirect") ?? "/products" : "/products");
+      if (isRegister) {
+        // No account exists yet — register only stages it and emails a
+        // code. /verify-email is what actually creates it and signs in.
+        await apiFetch<{ message: string }>("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({ fullName, email, phone, password }),
+        });
+        const redirect = searchParams.get("redirect");
+        const params = new URLSearchParams({ email });
+        if (redirect) params.set("redirect", redirect);
+        router.push(`/verify-email?${params.toString()}`);
+      } else {
+        const response = await apiFetch<AuthUser>("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password }),
+        });
+        auth.login(response);
+        // Signing in always lands on the storefront first, regardless of
+        // any ?redirect= param.
+        router.push("/products");
+      }
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setFormError(err.error.message);
@@ -112,6 +122,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
             placeholder={isRegister ? "At least 8 characters" : undefined}
           />
         </Field>
+        {!isRegister && (
+          <Link
+            href="/forgot-password"
+            className="mb-7 -mt-4 block text-right font-mono text-[11px] uppercase tracking-[0.08em] text-grey hover:text-ink"
+          >
+            Forgot password?
+          </Link>
+        )}
         {isRegister && password.length > 0 && (
           <Field
             label="Confirm password"

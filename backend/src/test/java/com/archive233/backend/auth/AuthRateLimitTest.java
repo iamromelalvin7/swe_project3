@@ -10,10 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.archive233.backend.support.FakeEmailConfig;
 
 /**
  * Overrides the max-attempts property so this class gets its own Spring
@@ -26,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(FakeEmailConfig.class)
 @TestPropertySource(properties = {
     "app.rate-limit.auth.max-attempts=2",
     "app.rate-limit.auth.window-minutes=15"
@@ -39,7 +43,7 @@ class AuthRateLimitTest {
     @Test
     void register_exceedingLimit_returns429WithErrorContract() throws Exception {
         for (int i = 0; i < 2; i++) {
-            registerAttempt(uniqueEmail("limit")).andExpect(status().isCreated());
+            registerAttempt(uniqueEmail("limit")).andExpect(status().isOk());
         }
 
         registerAttempt(uniqueEmail("limit"))
