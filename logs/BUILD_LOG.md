@@ -1,5 +1,45 @@
 # Build Log
 
+## Post-Phase-4 — rate limiting on login/register
+
+Approved and built after being logged in `SUGGESTIONS.md`: not in the PRD's
+FR/NFR list, so treated as out of scope until explicitly approved rather
+than built silently alongside a "cleanup" pass.
+
+- `auth/AuthRateLimiter.java`: an in-memory fixed-window counter
+  (`ConcurrentHashMap<String, Window>`, `Window` = start instant + atomic
+  count), keyed by whatever the caller passes in. In-memory only — this is a
+  single Render instance, so there's no shared cache to keep consistent, and
+  losing counters on redeploy is an acceptable trade against adding
+  infrastructure for a gap the PRD never named. Limit and window are
+  `@Value`-injected (`app.rate-limit.auth.max-attempts` /
+  `.window-minutes`, defaulting to 5 / 15 like every other tunable in
+  `application.properties`), not hardcoded.
+- `auth/AuthRateLimitFilter.java`: an `OncePerRequestFilter` — the same
+  pattern as `JwtAuthenticationFilter` — guarding only `POST
+  /api/auth/register` and `POST /api/auth/login`, keyed by request path plus
+  client IP (`X-Forwarded-For`'s first entry, since Render terminates TLS in
+  front of the app; falls back to `getRemoteAddr()`). A tripped limit writes
+  a `429` through the same `ErrorResponse`/`ApiError` shape
+  `RestAuthenticationEntryPoint` uses, rather than a bare status — hard rule
+  11 applies here too even though this runs before Spring MVC.
+- Wired into `SecurityConfig` via `addFilterBefore`, same as the JWT filter.
+- Deliberately not built: per-email limiting (the request body isn't cheaply
+  readable this early without extra plumbing), CAPTCHA, distributed/shared
+  state. All would be over-building past what this gap actually needs.
+
+`backend/.../auth/AuthRateLimitTest.java` overrides `max-attempts=2` via
+`@TestPropertySource` so it gets its own Spring context and its own
+`AuthRateLimiter` instance — otherwise its counts would collide with
+`AuthApiTest`'s register/login calls, which share the same simulated remote
+address within the same cached test context. Confirms 2 registrations
+succeed and the 3rd against the same key returns 429 with `RATE_LIMITED`.
+
+Removed the resolved rate-limiting entry from `SUGGESTIONS.md`.
+
+**Verification:** `mvn test` — 7/7 (`AuthApiTest` 4, `AuthRateLimitTest` 1,
+`CartExpiryTest` 1, `WebpSupportTest` 1).
+
 ## Phase 4 — FR-G5, client-side image downscale and WebP conversion
 
 Closes the Must-ship gap logged in `SUGGESTIONS.md` after the WebP-upload fix

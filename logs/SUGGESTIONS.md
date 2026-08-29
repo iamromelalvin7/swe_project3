@@ -7,8 +7,3 @@
   not, this should be named explicitly as an accepted gap in the final
   report rather than quietly left implying full seed data.
 
-- **No rate limiting anywhere.** `/api/auth/login` and
-  `/api/auth/register` have zero brute-force protection — no lockout, no
-  throttling, no CAPTCHA. Not in the PRD's FR/NFR list, so not a spec
-  gap, but worth naming in the report rather than leaving implicit.
-

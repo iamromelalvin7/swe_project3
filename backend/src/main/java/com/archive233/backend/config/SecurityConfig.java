@@ -12,6 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import com.archive233.backend.auth.AuthRateLimitFilter;
 import com.archive233.backend.auth.JwtAuthenticationFilter;
 import com.archive233.backend.error.RestAccessDeniedHandler;
 import com.archive233.backend.error.RestAuthenticationEntryPoint;
@@ -26,15 +27,18 @@ import com.archive233.backend.error.RestAuthenticationEntryPoint;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
     private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                           AuthRateLimitFilter authRateLimitFilter,
                            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
                            RestAccessDeniedHandler restAccessDeniedHandler,
                            CorsConfigurationSource corsConfigurationSource) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.authRateLimitFilter = authRateLimitFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
         this.corsConfigurationSource = corsConfigurationSource;
@@ -65,6 +69,7 @@ public class SecurityConfig {
                 .authenticationEntryPoint(restAuthenticationEntryPoint)
                 .accessDeniedHandler(restAccessDeniedHandler)
             )
+            .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
