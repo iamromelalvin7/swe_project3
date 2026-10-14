@@ -12,7 +12,7 @@ import { ErrorState, FormError } from "@/components/States";
 import { useToast } from "@/components/Toast";
 import { authFetch, ApiRequestError } from "@/lib/api";
 import { formatDateTime } from "@/lib/adminDates";
-import { ORDER_STEPS, nextOrderStep, orderStatusChip } from "@/lib/adminStatus";
+import { ORDER_STEPS, nextOrderStep, orderStatusChip, paymentChip } from "@/lib/adminStatus";
 import { formatMoney } from "@/lib/money";
 import { telLink, whatsappLink } from "@/lib/phone";
 import { useAdmin } from "@/lib/useAdmin";
@@ -28,6 +28,7 @@ export default function AdminOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [confirmingCollected, setConfirmingCollected] = useState(false);
 
   const load = useCallback(() => {
     if (!admin) return;
@@ -57,6 +58,22 @@ export default function AdminOrderDetailPage() {
     } finally {
       setBusy(false);
       setConfirmingCancel(false);
+    }
+  }
+
+  async function markCashCollected() {
+    if (!admin || !order) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await authFetch<OrderDetail>(`/api/admin/orders/${order.id}/payment/collected`, { method: "POST" });
+      setOrder(updated);
+      toast("Marked paid");
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.error.message : "Couldn't record the payment. Try again.");
+    } finally {
+      setBusy(false);
+      setConfirmingCollected(false);
     }
   }
 
@@ -103,6 +120,8 @@ export default function AdminOrderDetailPage() {
   const tel = telLink(order.deliveryPhone);
   const whatsapp = whatsappLink(order.deliveryPhone);
   const cashOnDelivery = order.paymentMethod === "CASH_ON_DELIVERY";
+  const paid = order.paymentStatus === "PAID";
+  const canMarkCollected = cashOnDelivery && !paid && !cancelled;
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0);
 
   return (
@@ -181,7 +200,7 @@ export default function AdminOrderDetailPage() {
                 <dd>{formatMoney(order.deliveryFeePesewas)}</dd>
               </div>
               <div className="flex justify-between border-t border-rule py-3 text-base">
-                <dt>{cashOnDelivery ? "Collect on delivery" : "Total"}</dt>
+                <dt>{cashOnDelivery && !paid ? "Collect on delivery" : "Total"}</dt>
                 <dd>{formatMoney(order.totalPesewas)}</dd>
               </div>
               <div className="flex justify-between py-1">
@@ -228,13 +247,35 @@ export default function AdminOrderDetailPage() {
 
           {next && (
             <button type="button" disabled={busy} onClick={() => advance(next)} className="btn-primary mt-4 h-[52px] w-full">
-              {busy && !confirmingCancel ? "Updating…" : `Mark as ${orderStatusChip(next).label.toLowerCase()}`}
+              {busy && !confirmingCancel && !confirmingCollected ? "Updating…" : `Mark as ${orderStatusChip(next).label.toLowerCase()}`}
             </button>
           )}
           {canCancel && (
             <button type="button" disabled={busy} onClick={() => setConfirmingCancel(true)} className="btn-outline mt-3 w-full">
               Cancel order
             </button>
+          )}
+
+          {order.paymentStatus && (
+            <>
+              <h2 className="eyebrow mb-3 mt-8">Payment</h2>
+              <div className="border border-rule p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm">{cashOnDelivery ? "Cash on delivery" : "Mobile Money / card"}</span>
+                  <StatusChip chip={paymentChip(order.paymentStatus)} />
+                </div>
+                {canMarkCollected && (
+                  <>
+                    <p className="mt-3 text-sm text-grey">
+                      Once the rider has collected {formatMoney(order.totalPesewas)}, record it here so the order stops showing as unpaid.
+                    </p>
+                    <button type="button" disabled={busy} onClick={() => setConfirmingCollected(true)} className="btn-outline mt-4 w-full">
+                      Mark cash collected
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </aside>
       </div>
@@ -248,6 +289,17 @@ export default function AdminOrderDetailPage() {
           busy={busy}
           onConfirm={() => advance("CANCELLED")}
           onCancel={() => setConfirmingCancel(false)}
+        />
+      )}
+
+      {confirmingCollected && (
+        <ConfirmDialog
+          title={`Collected ${formatMoney(order.totalPesewas)}?`}
+          body="The order is marked paid for you and the customer. Only confirm once the cash is in hand."
+          confirmLabel="Mark paid"
+          busy={busy}
+          onConfirm={markCashCollected}
+          onCancel={() => setConfirmingCollected(false)}
         />
       )}
     </AdminShell>

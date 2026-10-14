@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
@@ -14,6 +14,7 @@ import { authFetch, ApiRequestError } from "@/lib/api";
 import { formatStatus } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import type { OrderDetail } from "@/lib/types";
+import { ORDER_POLL_MS, orderMayChange, usePolling } from "@/lib/usePolling";
 
 const ORDERS_HREF = "/account?tab=orders";
 
@@ -30,6 +31,7 @@ function OrderDetailInner() {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const cancelSeq = useRef(0);
 
   const load = () => {
     if (!user) return;
@@ -51,8 +53,23 @@ function OrderDetailInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, params.id]);
 
+  // Status changes made by the shop show up without a refresh. Paused during a
+  // cancel, and a poll that started before the cancel is dropped, so a slow
+  // response can't put the old status back.
+  usePolling(
+    () => {
+      const seq = cancelSeq.current;
+      authFetch<OrderDetail>(`/api/orders/${params.id}`)
+        .then((latest) => seq === cancelSeq.current && setOrder(latest))
+        .catch(() => {});
+    },
+    ORDER_POLL_MS,
+    !!user && !!order && orderMayChange(order) && !confirmingCancel && !cancelling
+  );
+
   async function cancel() {
     if (!user || !order) return;
+    cancelSeq.current += 1;
     setCancelling(true);
     setCancelError(null);
     try {
@@ -103,16 +120,17 @@ function OrderDetailInner() {
   }
 
   const cashOnDelivery = order.paymentMethod === "CASH_ON_DELIVERY";
+  const paid = order.paymentStatus === "PAID";
   const rows: [string, string][] = [
     ["Order number", order.orderNumber],
     ["Status", formatStatus(order.status)],
     ["Delivering to", order.deliveryName],
     ["Phone", order.deliveryPhone],
     ["Address", `${order.deliveryAddress} · ${order.deliveryZoneName}`],
-    ["Payment", cashOnDelivery ? "Cash on delivery" : "Mobile Money / card"],
+    ["Payment", `${cashOnDelivery ? "Cash on delivery" : "Mobile Money / card"}${paid ? " · Paid" : ""}`],
     ["Subtotal", formatMoney(order.subtotalPesewas)],
     ["Delivery", formatMoney(order.deliveryFeePesewas)],
-    [cashOnDelivery ? "Total due on delivery" : "Total", formatMoney(order.totalPesewas)],
+    [cashOnDelivery && !paid ? "Total due on delivery" : "Total", formatMoney(order.totalPesewas)],
   ];
 
   const canCancel = order.status === "PENDING" || order.status === "CONFIRMED";

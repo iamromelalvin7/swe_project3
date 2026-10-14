@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -180,9 +181,10 @@ public class OrderService {
     /**
      * Revenue and items-sold are counted off DELIVERED orders (see
      * {@link OrderRepository#sumTotalPesewasByStatus}) — not payment
-     * status, since a cash-on-delivery payment never transitions to PAID
-     * anywhere in this codebase and a payment-based figure would
-     * therefore undercount every COD sale. "Awaiting action" is every
+     * status, since a cash-on-delivery payment only becomes PAID when an
+     * admin records the cash (see {@link #markCashCollected}), and a
+     * payment-based figure would undercount every COD sale not yet
+     * marked. "Awaiting action" is every
      * order not yet DELIVERED or CANCELLED, capped at 50 (NFR-P6) and
      * ordered oldest-first — the ones that have been waiting longest are
      * the most in need of the owner's attention.
@@ -231,6 +233,28 @@ public class OrderService {
         return toDetailDto(order);
     }
 
+    /**
+     * Records that the rider collected the cash for a cash-on-delivery order.
+     * Paystack payments are confirmed only by Paystack itself (webhook or
+     * verify), never by hand. Marking an already-paid order again is a no-op,
+     * so a double-click or a retried request is harmless.
+     */
+    @Transactional
+    public OrderDetailDto markCashCollected(UUID orderId) {
+        Order order = orderRepository.findDetailById(orderId).orElseThrow(() -> new NotFoundException("Order not found."));
+        Payment payment = paymentRepository.findByOrderId(orderId)
+            .orElseThrow(() -> new NotFoundException("This order has no payment record."));
+        if (payment.getMethod() != PaymentMethod.CASH_ON_DELIVERY) {
+            throw new ApiException(HttpStatus.CONFLICT, "NOT_CASH_ON_DELIVERY",
+                "Only cash-on-delivery orders are marked paid by hand. Paystack confirms its own payments.");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORDER_CANCELLED", "A cancelled order can't be marked paid.");
+        }
+        payment.setStatus(PaymentStatus.PAID);
+        return toDetailDto(order);
+    }
+
     private void applyTransition(Order order, OrderStatus newStatus, UUID changedBy) {
         OrderStatus current = order.getStatus();
         if (!ALLOWED_TRANSITIONS.getOrDefault(current, Set.of()).contains(newStatus)) {
@@ -259,12 +283,11 @@ public class OrderService {
         List<OrderItemDto> items = order.getItems().stream()
             .map(i -> new OrderItemDto(i.getProductTitle(), i.getProductSize(), i.getImageUrl(), i.getQuantity(), i.getPricePesewas()))
             .toList();
-        PaymentMethod method = paymentRepository.findByOrderId(order.getId())
-            .map(Payment::getMethod)
-            .orElse(null);
+        Optional<Payment> payment = paymentRepository.findByOrderId(order.getId());
         return new OrderDetailDto(order.getId(), order.getOrderNumber(), order.getStatus(),
             order.getDeliveryName(), order.getDeliveryPhone(), order.getDeliveryAddress(), order.getDeliveryZoneName(),
-            order.getDeliveryFeePesewas(), order.getSubtotalPesewas(), order.getTotalPesewas(), method, items,
+            order.getDeliveryFeePesewas(), order.getSubtotalPesewas(), order.getTotalPesewas(),
+            payment.map(Payment::getMethod).orElse(null), payment.map(Payment::getStatus).orElse(null), items,
             order.getCreatedAt());
     }
 }

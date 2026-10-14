@@ -168,6 +168,7 @@ export type OrderDetail = {
   subtotalPesewas: number;
   totalPesewas: number;
   paymentMethod: PaymentMethod | null;
+  paymentStatus: PaymentStatus | null;
   items: OrderItemLine[];
   createdAt: string;
 };

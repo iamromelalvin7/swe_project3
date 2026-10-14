@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.archive233.backend.order.OrderStatus;
 import com.archive233.backend.order.PaymentMethod;
+import com.archive233.backend.order.PaymentStatus;
 
 public record OrderDetailDto(
     UUID id,
@@ -19,6 +20,7 @@ public record OrderDetailDto(
     int subtotalPesewas,
     int totalPesewas,
     PaymentMethod paymentMethod,
+    PaymentStatus paymentStatus,
     List<OrderItemDto> items,
     OffsetDateTime createdAt
 ) {
