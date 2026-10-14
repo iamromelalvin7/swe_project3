@@ -4,11 +4,13 @@ import { Header } from "@/components/Header";
 
 export default function LoginPage() {
   return (
-    <main>
+    <>
       <Header />
-      <Suspense>
-        <AuthForm mode="signin" />
-      </Suspense>
-    </main>
+      <main>
+        <Suspense>
+          <AuthForm mode="signin" />
+        </Suspense>
+      </main>
+    </>
   );
 }

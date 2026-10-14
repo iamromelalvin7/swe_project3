@@ -4,43 +4,47 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
-import { useAuth } from "@/lib/auth";
-import { authFetch } from "@/lib/api";
+import { AdminPageHeader, FilterRow, FilterToggle, ListFooter, ListSkeleton } from "@/components/admin/AdminPageHeader";
+import { StatusChip } from "@/components/admin/StatusChip";
+import { ProductThumb } from "@/components/ProductImage";
+import { ErrorState } from "@/components/States";
+import { availabilityChip, productStatusChip } from "@/lib/adminStatus";
 import { formatMoney } from "@/lib/money";
-import type { AdminProductSummary, PageResponse, ProductStatus } from "@/lib/types";
+import { useAdmin } from "@/lib/useAdmin";
+import { useCounts, usePagedList } from "@/lib/usePagedList";
+import type { AdminProductSummary, ProductStatus } from "@/lib/types";
 
 const STATUSES: ProductStatus[] = ["DRAFT", "PUBLISHED", "ARCHIVED"];
 
+function stockClass(stock: number) {
+  return stock === 0 ? "text-signal" : stock === 1 ? "text-warning" : "text-ink";
+}
+
 function AdminProductsInner() {
-  const { ready, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") ?? "";
   const qParam = searchParams.get("q") ?? "";
+  const qs = new URLSearchParams();
+  if (statusFilter) qs.set("status", statusFilter);
+  if (qParam) qs.set("q", qParam);
+  const admin = useAdmin(`/admin/products${qs.toString() ? `?${qs}` : ""}`);
   const [q, setQ] = useState(qParam);
-  const [products, setProducts] = useState<AdminProductSummary[] | null>(null);
-  const [error, setError] = useState(false);
 
-  const load = () => {
-    if (user?.role !== "ADMIN") return;
-    setError(false);
-    const params = new URLSearchParams();
-    if (statusFilter) params.set("status", statusFilter);
-    if (qParam) params.set("q", qParam);
-    authFetch<PageResponse<AdminProductSummary>>(`/api/admin/products?${params.toString()}`, user.token)
-      .then((res) => setProducts(res.items))
-      .catch(() => setError(true));
-  };
+  useEffect(() => setQ(qParam), [qParam]);
 
-  useEffect(() => {
-    if (ready && (!user || user.role !== "ADMIN")) {
-      router.push("/login?redirect=/admin/products");
-      return;
-    }
-    setProducts(null);
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, statusFilter, qParam]);
+  const list = usePagedList<AdminProductSummary>(admin ? `/api/admin/products?${qs.toString()}` : null, !!admin);
+
+  const qPart = qParam ? `&q=${encodeURIComponent(qParam)}` : "";
+  const counts = useCounts(
+    admin
+      ? {
+          all: `/api/admin/products?${qPart.slice(1)}`,
+          ...Object.fromEntries(STATUSES.map((s) => [s, `/api/admin/products?status=${s}${qPart}`])),
+        }
+      : null,
+    !!admin
+  );
 
   function pushParams(next: { status?: string; q?: string }) {
     const params = new URLSearchParams();
@@ -48,120 +52,161 @@ function AdminProductsInner() {
     const query = next.q !== undefined ? next.q : qParam;
     if (status) params.set("status", status);
     if (query) params.set("q", query);
-    const qs = params.toString();
-    router.push(qs ? `/admin/products?${qs}` : "/admin/products");
+    const s = params.toString();
+    router.push(s ? `/admin/products?${s}` : "/admin/products");
   }
+
+  const filtered = !!statusFilter || !!qParam;
 
   return (
     <AdminShell>
-      <div>
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="font-serif text-[56px] max-[640px]:text-[38px]">Products</h1>
-          <Link
-            href="/admin/products/new"
-            className="h-11 bg-ink px-6 font-mono text-[11px] uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
-          >
-            <span className="flex h-full items-center">+ New product</span>
+      <AdminPageHeader
+        title="Products"
+        actions={
+          <Link href="/admin/products/new" className="btn-primary h-11">
+            + New product
           </Link>
+        }
+      />
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <FilterRow label="Filter by status">
+          {["", ...STATUSES].map((s) => (
+            <FilterToggle key={s || "all"} active={statusFilter === s} count={counts[s || "all"]} onClick={() => pushParams({ status: s })}>
+              {s ? productStatusChip(s as ProductStatus).label : "All"}
+            </FilterToggle>
+          ))}
+        </FilterRow>
+        <form
+          role="search"
+          className="flex w-full max-w-[340px] items-center gap-2 max-[640px]:max-w-none"
+          onSubmit={(e) => {
+            e.preventDefault();
+            pushParams({ q: q.trim() });
+          }}
+        >
+          <input
+            type="search"
+            aria-label="Search products by title or brand"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search title or brand"
+            className="field-input h-10 flex-1"
+          />
+          <button type="submit" className="btn-outline h-10 px-4">
+            Search
+          </button>
+        </form>
+      </div>
+
+      {list.error && <ErrorState title="Products didn't load" onRetry={list.reload} />}
+
+      {!list.error && !list.items && <ListSkeleton />}
+
+      {list.items && list.items.length === 0 && (
+        <div className="border-t border-rule py-16 text-center">
+          <div className="mb-2 font-serif text-h3">{filtered ? "No products match" : "No products yet"}</div>
+          <p className="mb-6 text-sm text-grey">
+            {filtered ? "Try a different status or search." : "Add your first piece to start the archive."}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {filtered && (
+              <Link href="/admin/products" className="btn-outline h-11">
+                Clear filters
+              </Link>
+            )}
+            <Link href="/admin/products/new" className="btn-primary h-11">
+              + New product
+            </Link>
+          </div>
         </div>
+      )}
 
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-3">
-            {["", ...STATUSES].map((s) => (
-              <button
-                key={s || "all"}
-                onClick={() => pushParams({ status: s })}
-                className={`h-9 border px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] ${
-                  statusFilter === s ? "border-ink bg-ink text-white" : "border-rule text-grey hover:text-ink"
-                }`}
-              >
-                {s ? s.replace(/_/g, " ") : "All"}
-              </button>
-            ))}
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              pushParams({ q });
-            }}
-          >
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search title or brand"
-              className="field-input h-9 w-56"
-            />
-          </form>
-        </div>
+      {list.items && list.items.length > 0 && (
+        <>
+          {/* Desktop: table */}
+          <table className="admin-table max-[1099px]:hidden">
+            <thead>
+              <tr>
+                <th scope="col" className="w-[60px]">
+                  <span className="sr-only">Photo</span>
+                </th>
+                <th scope="col">Product</th>
+                <th scope="col">Category</th>
+                <th scope="col">Size</th>
+                <th scope="col" className="text-right">
+                  Price
+                </th>
+                <th scope="col" className="text-right">
+                  Stock
+                </th>
+                <th scope="col">Availability</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.items.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <ProductThumb src={p.primaryThumbUrl} alt="" className="w-11" />
+                  </td>
+                  <td className="max-w-[320px]">
+                    <Link href={`/admin/products/${p.id}/edit`} className="row-link block truncate font-serif text-title hover:text-grey">
+                      {p.title}
+                    </Link>
+                    <div className="mt-0.5 truncate font-mono text-micro uppercase tracking-label text-grey">{p.brand}</div>
+                  </td>
+                  <td className="text-grey">{p.categoryName}</td>
+                  <td className="font-mono text-meta text-grey">{p.sizeLabel}</td>
+                  <td className="text-right font-mono text-meta">{formatMoney(p.pricePesewas)}</td>
+                  <td className={`text-right font-mono text-meta ${stockClass(p.stockQuantity)}`}>{p.stockQuantity}</td>
+                  <td>
+                    <StatusChip chip={availabilityChip(p.availability)} />
+                  </td>
+                  <td>
+                    <StatusChip chip={productStatusChip(p.status)} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        {!products && !error && (
-          <div className="border-t border-rule py-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="border-b border-rule py-4">
-                <div className="h-2.5 w-full max-w-[600px] animate-pulse bg-skeleton" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div className="border-t border-rule py-20 text-center">
-            <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
-            <div className="mb-2.5 font-serif text-[28px]">Products did not load</div>
-            <div className="mb-6 text-sm text-grey">The shop is reachable but the listing request failed.</div>
-            <button
-              onClick={load}
-              className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
-            >
-              Try again
-            </button>
-          </div>
-        )}
-
-        {products && products.length === 0 && (
-          <div className="border-t border-rule py-16 text-center text-sm text-grey">No products match.</div>
-        )}
-
-        {products && products.length > 0 && (
-          <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[56px_1fr_130px_90px_110px_80px_130px_120px] items-center gap-4 border-b border-rule pb-3.5">
-                {["", "Title", "Category", "Size", "Price", "Stock", "Availability", "Status"].map((h, i) => (
-                  <div key={h || "photo"} className={`font-mono text-[11px] uppercase tracking-[0.1em] text-grey ${i >= 4 ? "text-right" : ""}`}>
-                    {h}
-                  </div>
-                ))}
-              </div>
-              {products.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/admin/products/${p.id}/edit`}
-                  className="grid grid-cols-[56px_1fr_130px_90px_110px_80px_130px_120px] items-center gap-4 border-b border-rule py-3 hover:bg-hover-light"
-                >
-                  <div className="h-14 w-14 overflow-hidden rounded-[3px] border border-rule bg-white">
-                    {p.primaryThumbUrl && <img src={p.primaryThumbUrl} alt="" className="h-full w-full object-cover" />}
-                  </div>
-                  <div className="min-w-0 truncate text-sm">{p.title}</div>
-                  <div className="truncate text-sm text-grey">{p.categoryName}</div>
-                  <div className="font-mono text-[13px] text-grey">{p.sizeLabel}</div>
-                  <div className="text-right font-mono text-[13px]">{formatMoney(p.pricePesewas)}</div>
-                  <div className="text-right font-mono text-[13px] text-grey">{p.stockQuantity}</div>
-                  <div className="text-right font-mono text-[11px] uppercase tracking-[0.1em] text-grey">
-                    {p.availability.replace(/_/g, " ")}
-                  </div>
-                  <div
-                    className={`text-right font-mono text-[11px] uppercase tracking-[0.1em] ${
-                      p.status === "ARCHIVED" ? "text-signal" : "text-ink"
-                    }`}
-                  >
-                    {p.status}
+          {/* Mobile & tablet: cards */}
+          <ul className="border-t border-rule min-[1100px]:hidden">
+            {list.items.map((p) => (
+              <li key={p.id} className="border-b border-rule">
+                <Link href={`/admin/products/${p.id}/edit`} className="flex gap-4 py-4 hover:bg-hover-light">
+                  <ProductThumb src={p.primaryThumbUrl} alt="" className="w-16" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-micro uppercase tracking-label text-grey">
+                      {p.brand} · {p.sizeLabel} · {p.categoryName}
+                    </div>
+                    <div className="mt-1 font-serif text-title">{p.title}</div>
+                    <div className="mt-1 flex items-center gap-3 font-mono text-meta tabular-nums">
+                      <span>{formatMoney(p.pricePesewas)}</span>
+                      <span className={stockClass(p.stockQuantity)}>Stock {p.stockQuantity}</span>
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      <StatusChip chip={productStatusChip(p.status)} />
+                      <StatusChip chip={availabilityChip(p.availability)} />
+                    </div>
                   </div>
                 </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+              </li>
+            ))}
+          </ul>
+
+          <ListFooter
+            shown={list.items.length}
+            total={list.totalItems}
+            noun={list.totalItems === 1 ? "product" : "products"}
+            hasMore={list.hasMore}
+            loadingMore={list.loadingMore}
+            moreError={list.moreError}
+            onLoadMore={list.loadMore}
+          />
+        </>
+      )}
     </AdminShell>
   );
 }

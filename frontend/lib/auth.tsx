@@ -1,24 +1,30 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { apiFetch } from "./api";
 
+/**
+ * The signed-in user as the browser knows them. There is deliberately no
+ * token here: the session lives in an HttpOnly cookie that page JavaScript
+ * (including any injected script) can't read.
+ */
 export type AuthUser = {
-  token: string;
   id: string;
   fullName: string;
   email: string;
   role: "CUSTOMER" | "ADMIN";
 };
 
-export const AUTH_STORAGE_KEY = "archive233_auth";
-const STORAGE_KEY = AUTH_STORAGE_KEY;
+/** Where older versions kept the token in localStorage — removed on load. */
+const LEGACY_STORAGE_KEY = "archive233_auth";
 
 type AuthContextValue = {
   user: AuthUser | null;
   ready: boolean;
-  login: (auth: AuthUser) => void;
-  logout: () => void;
-  updateUser: (patch: Partial<Omit<AuthUser, "token" | "id" | "role">>) => void;
+  /** Record a sign-in. The cookie was already set by the sign-in response. */
+  login: (user: AuthUser) => void;
+  logout: () => Promise<void>;
+  updateUser: (patch: Partial<Omit<AuthUser, "id" | "role">>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -28,41 +34,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        setUser(JSON.parse(raw));
-      } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
-      }
+    try {
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch {
+      // storage unavailable — nothing to clean up
     }
-    setReady(true);
+    apiFetch<{ user?: AuthUser }>("/api/auth/session")
+      .then((res) => setUser(res.user ?? null))
+      .catch(() => setUser(null))
+      .finally(() => setReady(true));
   }, []);
 
-  const login = useCallback((auth: AuthUser) => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
-    setUser(auth);
+  const login = useCallback((next: AuthUser) => setUser(next), []);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      setUser(null);
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    window.localStorage.removeItem(STORAGE_KEY);
-    setUser(null);
+  const updateUser = useCallback((patch: Partial<Omit<AuthUser, "id" | "role">>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
 
-  const updateUser = useCallback((patch: Partial<Omit<AuthUser, "token" | "id" | "role">>) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, ...patch };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, ready, login, logout, updateUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, ready, login, logout, updateUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

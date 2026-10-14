@@ -4,11 +4,13 @@ import { Header } from "@/components/Header";
 
 export default function RegisterPage() {
   return (
-    <main>
+    <>
       <Header />
-      <Suspense>
-        <AuthForm mode="register" />
-      </Suspense>
-    </main>
+      <main>
+        <Suspense>
+          <AuthForm mode="register" />
+        </Suspense>
+      </main>
+    </>
   );
 }

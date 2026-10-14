@@ -1,51 +1,83 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
-import { useAuth } from "@/lib/auth";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { OrderCards } from "@/components/admin/OrderCards";
+import { StatusChip } from "@/components/admin/StatusChip";
+import { ErrorState } from "@/components/States";
 import { authFetch } from "@/lib/api";
+import { formatShortDate } from "@/lib/adminDates";
+import { orderStatusChip, paymentChip } from "@/lib/adminStatus";
 import { formatMoney } from "@/lib/money";
-import type { AdminDashboard } from "@/lib/types";
+import { useAdmin } from "@/lib/useAdmin";
+import { ADMIN_PAGE_SIZE } from "@/lib/usePagedList";
+import type { AdminDashboard, AdminProductSummary, PageResponse } from "@/lib/types";
+
+type Inventory = { onHold: number; soldOutPublished: number; drafts: number };
+
+/** Walks every published product (plus the draft count) to find what needs the owner's attention. */
+async function loadInventory(): Promise<Inventory> {
+  let onHold = 0;
+  let soldOutPublished = 0;
+  for (let page = 0, totalPages = 1; page < totalPages && page < 20; page++) {
+    const res = await authFetch<PageResponse<AdminProductSummary>>(
+      `/api/admin/products?status=PUBLISHED&page=${page}&pageSize=${ADMIN_PAGE_SIZE}`
+    );
+    totalPages = res.totalPages;
+    for (const p of res.items) {
+      if (p.availability === "RESERVED") onHold++;
+      if (p.availability === "SOLD_OUT") soldOutPublished++;
+    }
+  }
+  const drafts = await authFetch<PageResponse<AdminProductSummary>>("/api/admin/products?status=DRAFT&pageSize=1");
+  return { onHold, soldOutPublished, drafts: drafts.totalItems };
+}
 
 export default function AdminDashboardPage() {
-  const { ready, user } = useAuth();
-  const router = useRouter();
+  const admin = useAdmin("/admin/dashboard");
   const [data, setData] = useState<AdminDashboard | null>(null);
+  const [inventory, setInventory] = useState<Inventory | null>(null);
   const [error, setError] = useState(false);
 
-  const load = () => {
-    if (user?.role !== "ADMIN") return;
+  const load = useCallback(() => {
+    if (!admin) return;
     setError(false);
-    authFetch<AdminDashboard>("/api/admin/dashboard", user.token)
+    authFetch<AdminDashboard>("/api/admin/dashboard")
       .then(setData)
       .catch(() => setError(true));
-  };
+    // The attention strip is a bonus — if it fails the dashboard still works.
+    loadInventory()
+      .then(setInventory)
+      .catch(() => setInventory(null));
+  }, [admin]);
 
   useEffect(() => {
-    if (ready && (!user || user.role !== "ADMIN")) {
-      router.push("/login?redirect=/admin/dashboard");
-      return;
-    }
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user]);
+  }, [load]);
+
+  const header = (
+    <AdminPageHeader
+      title="Overview"
+      actions={
+        <>
+          <Link href="/products" className="btn-outline h-11">
+            View store
+          </Link>
+          <Link href="/admin/products/new" className="btn-primary h-11">
+            + New product
+          </Link>
+        </>
+      }
+    />
+  );
 
   if (error) {
     return (
       <AdminShell>
-        <div className="py-24 text-center">
-          <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
-          <div className="mb-2.5 font-serif text-[28px]">The dashboard did not load</div>
-          <div className="mb-6 text-sm text-grey">The shop is reachable but the overview request failed.</div>
-          <button
-            onClick={load}
-            className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
-          >
-            Try again
-          </button>
-        </div>
+        {header}
+        <ErrorState title="The dashboard didn't load" onRetry={load} className="border-t border-rule py-20" />
       </AdminShell>
     );
   }
@@ -53,80 +85,167 @@ export default function AdminDashboardPage() {
   if (!data) {
     return (
       <AdminShell>
-        <div>
-          <h1 className="mb-8 font-serif text-[56px] max-[640px]:text-[38px]">Overview</h1>
-          <div className="grid grid-cols-2 border-y border-rule min-[900px]:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        {header}
+        <div aria-busy="true" aria-label="Loading">
+          <div className="grid grid-cols-2 gap-px border-y border-rule bg-rule min-[900px]:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className={`py-6 pl-4 min-[900px]:py-[26px] min-[900px]:pl-6 ${i > 0 ? "border-l border-rule" : ""}`}>
-                <div className="h-2.5 w-[70%] animate-pulse bg-skeleton" />
-                <div className="mt-4 h-6 w-[50%] animate-pulse bg-skeleton" />
+              <div key={i} className="bg-cream px-5 py-6">
+                <div className="skeleton h-2.5 w-[60%]" />
+                <div className="skeleton mt-4 h-7 w-[50%]" />
               </div>
             ))}
           </div>
+          <div className="skeleton mt-8 h-24" />
         </div>
       </AdminShell>
     );
   }
 
   const metrics = [
-    { label: "Total revenue", value: formatMoney(data.totalRevenuePesewas) },
-    { label: "Orders", value: String(data.orderCount) },
-    { label: "Items sold", value: String(data.itemsSold) },
-    { label: "Live stock", value: String(data.liveStockUnits) },
+    { label: "Revenue", value: formatMoney(data.totalRevenuePesewas), note: "Delivered orders" },
+    { label: "Orders", value: String(data.orderCount), note: "All time" },
+    { label: "Pieces sold", value: String(data.itemsSold), note: "Delivered" },
+    { label: "Live stock", value: String(data.liveStockUnits), note: "Units on sale" },
+  ];
+
+  const attention = [
+    {
+      label: "Orders to fulfil",
+      value: data.awaitingActionCount,
+      href: "/admin/orders",
+      hint: "Not yet delivered or cancelled",
+    },
+    {
+      label: "On hold now",
+      value: inventory?.onHold,
+      href: "/admin/products?status=PUBLISHED",
+      hint: "In a shopper's cart for up to 10 minutes",
+    },
+    {
+      label: "Drafts",
+      value: inventory?.drafts,
+      href: "/admin/products?status=DRAFT",
+      hint: "Not visible in the shop yet",
+    },
+    {
+      label: "Sold out, still listed",
+      value: inventory?.soldOutPublished,
+      href: "/admin/products?status=PUBLISHED",
+      hint: "Archive these to tidy the shop",
+    },
   ];
 
   return (
     <AdminShell>
-      <div>
-        <h1 className="mb-8 font-serif text-[56px] max-[640px]:text-[38px]">Overview</h1>
+      {header}
 
-        <div className="grid grid-cols-2 border-y border-rule min-[900px]:grid-cols-[1.5fr_1fr_1fr_1fr]">
-          {metrics.map((m, i) => (
-            <div key={m.label} className={`min-w-0 py-6 pl-4 pr-3 min-[900px]:py-[26px] min-[900px]:pl-6 ${i > 0 ? "border-l border-rule" : ""}`}>
-              <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">{m.label}</div>
-              <div className="mt-3 font-mono text-xl tracking-[-0.01em] min-[900px]:whitespace-nowrap min-[900px]:text-[32px]">{m.value}</div>
-            </div>
+      <section aria-label="Totals" className="grid grid-cols-2 gap-px border-y border-rule bg-rule tabular-nums min-[900px]:grid-cols-4">
+        {metrics.map((m) => (
+          <div key={m.label} className="min-w-0 bg-cream px-5 py-6 max-[640px]:px-4">
+            <div className="eyebrow">{m.label}</div>
+            <div className="mt-2.5 truncate font-mono text-h3 leading-none max-[640px]:text-xl">{m.value}</div>
+            <div className="mt-2 text-xs text-grey">{m.note}</div>
+          </div>
+        ))}
+      </section>
+
+      <section aria-labelledby="attention-heading" className="mt-10">
+        <h2 id="attention-heading" className="eyebrow mb-3">
+          Needs attention
+        </h2>
+        <ul className="grid grid-cols-4 gap-3 max-[1099px]:grid-cols-2">
+          {attention.map((a) => (
+            <li key={a.label}>
+              <Link
+                href={a.href}
+                className={`block h-full border p-4 transition-colors hover:border-ink ${a.value ? "border-ink/30" : "border-rule"}`}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-mono text-micro uppercase tracking-label text-grey">{a.label}</span>
+                  <span aria-hidden="true" className="text-grey">
+                    →
+                  </span>
+                </div>
+                <div className={`mt-2 font-mono text-h3 tabular-nums ${a.value ? "text-ink" : "text-grey"}`}>
+                  {a.value === undefined ? <span className="skeleton inline-block h-6 w-8 align-middle" /> : a.value}
+                </div>
+                <div className="mt-1 text-xs text-grey">{a.hint}</div>
+              </Link>
+            </li>
           ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="awaiting-heading" className="mt-12">
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 id="awaiting-heading" className="font-serif text-h3">
+            Orders to fulfil
+          </h2>
+          {data.awaitingActionCount > 0 && (
+            <Link href="/admin/orders" className="link-quiet">
+              All orders →
+            </Link>
+          )}
         </div>
 
-        <h2 className="mb-6 mt-14 font-serif text-[28px] min-[900px]:text-[36px]">Awaiting action</h2>
-
-        {data.awaitingAction.length === 0 && (
-          <div className="border-t border-rule py-16 text-center text-sm text-grey">Nothing needs attention right now.</div>
-        )}
-
-        {data.awaitingAction.length > 0 && (
-          <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[110px_150px_130px_130px_70px_130px_100px_130px] gap-4 border-b border-rule pb-3.5">
-                {["Order", "Customer", "Phone", "Zone", "Items", "Total", "Payment", "Status"].map((h, i) => (
-                  <div key={h} className={`font-mono text-[11px] uppercase tracking-[0.1em] text-grey ${i >= 5 ? "text-right" : ""}`}>
-                    {h}
-                  </div>
-                ))}
-              </div>
-              {data.awaitingAction.map((o) => (
-                <Link
-                  key={o.id}
-                  href={`/admin/orders/${o.id}`}
-                  className="grid grid-cols-[110px_150px_130px_130px_70px_130px_100px_130px] items-center gap-4 border-b border-rule py-[18px] hover:bg-hover-light"
-                >
-                  <div className="font-mono text-[13px]">{o.orderNumber}</div>
-                  <div className="text-sm">{o.customerName}</div>
-                  <div className="font-mono text-[13px] text-grey">{o.customerPhone}</div>
-                  <div className="text-sm">{o.zoneName}</div>
-                  <div className="font-mono text-[13px] text-grey">{o.itemCount}</div>
-                  <div className="text-right font-mono text-[13px]">{formatMoney(o.totalPesewas)}</div>
-                  <div className={`text-right font-mono text-[11px] uppercase tracking-[0.1em] ${o.paymentStatus === "PAID" ? "text-ink" : "text-signal"}`}>
-                    {o.paymentStatus}
-                  </div>
-                  <div className="text-right font-mono text-[11px] uppercase tracking-[0.1em]">{o.status.replace(/_/g, " ")}</div>
-                </Link>
-              ))}
-            </div>
+        {data.awaitingAction.length === 0 ? (
+          <div className="border-t border-rule py-14 text-center">
+            <div className="font-serif text-lead">You&apos;re all caught up.</div>
+            <p className="mt-2 text-sm text-grey">New orders appear here as soon as a customer checks out.</p>
           </div>
+        ) : (
+          <>
+            <table className="admin-table max-[1099px]:hidden">
+              <thead>
+                <tr>
+                  <th scope="col">Order</th>
+                  <th scope="col">Placed</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Zone</th>
+                  <th scope="col" className="text-right">
+                    Total
+                  </th>
+                  <th scope="col">Payment</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.awaitingAction.map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <Link href={`/admin/orders/${o.id}`} className="row-link font-mono text-meta hover:text-grey">
+                        {o.orderNumber}
+                      </Link>
+                    </td>
+                    <td className="font-mono text-meta text-grey">{formatShortDate(o.createdAt)}</td>
+                    <td>
+                      <div>{o.customerName}</div>
+                      <div className="font-mono text-micro text-grey">{o.customerPhone}</div>
+                    </td>
+                    <td className="text-grey">{o.zoneName}</td>
+                    <td className="text-right font-mono text-meta">{formatMoney(o.totalPesewas)}</td>
+                    <td>
+                      <StatusChip chip={paymentChip(o.paymentStatus)} />
+                    </td>
+                    <td>
+                      <StatusChip chip={orderStatusChip(o.status)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <OrderCards orders={data.awaitingAction} />
+            {data.awaitingActionCount > data.awaitingAction.length && (
+              <p className="mt-4 font-mono text-micro uppercase tracking-label text-grey">
+                Showing {data.awaitingAction.length} of {data.awaitingActionCount} ·{" "}
+                <Link href="/admin/orders" className="text-ink underline underline-offset-4">
+                  see all
+                </Link>
+              </p>
+            )}
+          </>
         )}
-      </div>
+      </section>
     </AdminShell>
   );
 }

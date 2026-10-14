@@ -1,82 +1,80 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
-import { useAuth } from "@/lib/auth";
-import { apiFetch, authFetch, ApiRequestError } from "@/lib/api";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ImageDropzone, type PendingImage } from "@/components/ImageDropzone";
-import { ProductFormFields, emptyProductForm } from "@/components/ProductFormFields";
+import { ProductFormFields, emptyProductForm, toProductRequest, type ProductFormValues } from "@/components/ProductFormFields";
+import { FormError } from "@/components/States";
+import { useToast } from "@/components/Toast";
+import { apiFetch, authFetch, ApiRequestError } from "@/lib/api";
+import { useAdmin } from "@/lib/useAdmin";
+import { uploadProductPhotos } from "@/lib/uploads";
+import { useUnsavedChanges } from "@/lib/useUnsavedChanges";
 import type { CatalogFilterOptions } from "@/lib/types";
 
+type Submitting = "draft" | "publish" | "publishAnother" | null;
+
 export default function NewProductPage() {
-  const { ready, user } = useAuth();
+  const admin = useAdmin("/admin/products/new");
   const router = useRouter();
+  const toast = useToast();
   const [options, setOptions] = useState<CatalogFilterOptions | null>(null);
-  const [form, setForm] = useState(emptyProductForm);
+  const [form, setForm] = useState<ProductFormValues>(emptyProductForm);
   const [images, setImages] = useState<PendingImage[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState<"draft" | "publish" | "publishAnother" | null>(null);
-  const [justPublished, setJustPublished] = useState(false);
+  const [submitting, setSubmitting] = useState<Submitting>(null);
 
   useEffect(() => {
-    if (ready && (!user || user.role !== "ADMIN")) {
-      router.push("/login?redirect=/admin/products/new");
-      return;
-    }
-    apiFetch<CatalogFilterOptions>("/api/catalog/filters").then(setOptions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user]);
+    if (!admin) return;
+    apiFetch<CatalogFilterOptions>("/api/catalog/filters")
+      .then(setOptions)
+      .catch(() => setFormError("Couldn't load categories and sizes. Reload the page to try again."));
+  }, [admin]);
 
-  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+  const dirty = JSON.stringify(form) !== JSON.stringify(emptyProductForm) || images.length > 0;
+  const leaveDialog = useUnsavedChanges(dirty && submitting === null);
+
+  function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
   async function submit(status: "DRAFT" | "PUBLISHED", andAnother: boolean) {
-    if (!user) return;
+    if (!admin) return;
     setFormError(null);
     setErrors({});
-    setJustPublished(false);
     setSubmitting(status === "DRAFT" ? "draft" : andAnother ? "publishAnother" : "publish");
     try {
-      const priceValue = Math.round(parseFloat(form.pricePesewas || "0") * 100);
-      const created = await authFetch<{ id: string }>("/api/admin/products", user.token, {
+      const created = await authFetch<{ id: string }>("/api/admin/products", {
         method: "POST",
-        body: JSON.stringify({
-          title: form.title,
-          description: null,
-          categoryId: form.categoryId || null,
-          brand: form.brand,
-          sizeLabel: form.sizeLabel,
-          condition: form.condition || null,
-          colour: form.colour || null,
-          era: form.era || null,
-          sizingNotes: form.sizingNotes || null,
-          flaws: form.flaws || null,
-          pricePesewas: priceValue,
-          stockQuantity: parseInt(form.stockQuantity || "1", 10),
-          status,
-        }),
+        body: JSON.stringify(toProductRequest(form, status, "1")),
       });
 
       if (images.length > 0) {
-        const body = new FormData();
-        images.forEach((img, i) => body.append("files", img.blob, `photo-${i + 1}.webp`));
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${created.id}/images`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${user.token}` },
-          body,
-        });
+        try {
+          await uploadProductPhotos(created.id, images.map((img) => img.blob));
+        } catch {
+          // The product exists; send the admin to its edit page to add the
+          // missing photos rather than creating a duplicate product here.
+          router.push(`/admin/products/${created.id}/edit?photos=failed`);
+          return;
+        }
       }
 
+      images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      const label = status === "DRAFT" ? "Saved as draft" : "Published";
       if (andAnother) {
         setForm(emptyProductForm);
-        images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
         setImages([]);
-        setJustPublished(true);
+        toast(`${label} · add the next piece`, { href: `/admin/products/${created.id}/edit`, label: "Edit it" });
+        // The admin shell scrolls its <main>, not the window.
+        document.querySelector(".admin-shell main")?.scrollTo({ top: 0 });
       } else {
+        toast(label, status === "PUBLISHED" ? { href: `/products/${created.id}`, label: "View on store" } : undefined);
         router.push("/admin/products");
       }
     } catch (err) {
@@ -84,7 +82,7 @@ export default function NewProductPage() {
         setFormError(err.error.message);
         setErrors(err.error.fields ?? {});
       } else {
-        setFormError("Could not save this product.");
+        setFormError("Couldn't save this product. Try again.");
       }
     } finally {
       setSubmitting(null);
@@ -93,60 +91,48 @@ export default function NewProductPage() {
 
   return (
     <AdminShell>
-      <div>
-        <h1 className="mb-10 font-serif text-[56px] max-[640px]:text-[38px]">New product</h1>
+      <Link href="/admin/products" className="link-quiet mb-5 inline-block">
+        ← All products
+      </Link>
+      <AdminPageHeader
+        eyebrow="Products"
+        title="New product"
+        meta={dirty ? <span className="font-mono text-micro uppercase tracking-label text-warning">Unsaved changes</span> : undefined}
+      />
 
-        {formError && <div className="mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-signal">{formError}</div>}
-        {justPublished && (
-          <div className="mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-grey">
-            Published. Add the next piece below.
+      <FormError message={formError} />
+
+      <div className="grid grid-cols-[minmax(240px,35%)_1fr] items-start gap-12 max-[1099px]:grid-cols-1 max-[1099px]:gap-10">
+        <section aria-labelledby="photos-heading">
+          <h2 id="photos-heading" className="eyebrow mb-3">
+            Photos · {images.length} of 6
+          </h2>
+          <ImageDropzone images={images} setImages={setImages} maxImages={6} imageError={imageError} setImageError={setImageError} />
+          <p className="mt-3 text-sm text-grey">The first photo is the cover. Each one is framed to 3:4 before it&apos;s added.</p>
+        </section>
+
+        <section aria-label="Details">
+          <ProductFormFields form={form} update={update} errors={errors} options={options} />
+
+          <div className="mt-12 flex flex-wrap items-center justify-end gap-3 border-t border-rule pt-7">
+            <button
+              type="button"
+              disabled={submitting !== null}
+              onClick={() => submit("DRAFT", false)}
+              className="h-12 px-3 font-mono text-label uppercase tracking-label text-grey hover:text-ink disabled:opacity-50"
+            >
+              {submitting === "draft" ? "Saving…" : "Save draft"}
+            </button>
+            <button type="button" disabled={submitting !== null} onClick={() => submit("PUBLISHED", true)} className="btn-outline">
+              {submitting === "publishAnother" ? "Publishing…" : "Publish and add another"}
+            </button>
+            <button type="button" disabled={submitting !== null} onClick={() => submit("PUBLISHED", false)} className="btn-primary">
+              {submitting === "publish" ? "Publishing…" : "Publish"}
+            </button>
           </div>
-        )}
-
-        <div className="grid grid-cols-[35%_1fr] items-start gap-14 max-[900px]:grid-cols-1">
-          <div>
-            <ImageDropzone
-              images={images}
-              setImages={setImages}
-              maxImages={6}
-              imageError={imageError}
-              setImageError={setImageError}
-            />
-            <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">1 is primary</div>
-          </div>
-
-          <div>
-            <ProductFormFields form={form} update={update} errors={errors} options={options} />
-
-            <div className="mt-12 flex flex-wrap items-center gap-6 border-t border-rule pt-7">
-              <button
-                type="button"
-                disabled={submitting !== null}
-                onClick={() => submit("DRAFT", false)}
-                className="h-12 font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink disabled:opacity-50"
-              >
-                Save draft
-              </button>
-              <button
-                type="button"
-                disabled={submitting !== null}
-                onClick={() => submit("PUBLISHED", true)}
-                className="h-12 border border-ink px-[26px] font-mono text-[11px] uppercase tracking-[0.1em] hover:bg-ink hover:text-white disabled:opacity-50"
-              >
-                Publish and add another
-              </button>
-              <button
-                type="button"
-                disabled={submitting !== null}
-                onClick={() => submit("PUBLISHED", false)}
-                className="h-12 bg-ink px-[30px] font-mono text-[11px] uppercase tracking-[0.1em] text-white hover:bg-hover-dark disabled:opacity-50"
-              >
-                Publish
-              </button>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
+      {leaveDialog}
     </AdminShell>
   );
 }

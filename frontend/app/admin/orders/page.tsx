@@ -1,120 +1,199 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
-import { useAuth } from "@/lib/auth";
-import { authFetch } from "@/lib/api";
+import { AdminPageHeader, FilterRow, FilterToggle, ListFooter, ListSkeleton } from "@/components/admin/AdminPageHeader";
+import { OrderCards } from "@/components/admin/OrderCards";
+import { StatusChip } from "@/components/admin/StatusChip";
+import { ErrorState } from "@/components/States";
+import { orderStatusChip, paymentChip } from "@/lib/adminStatus";
+import { DATE_RANGES, formatShortDate, parseRange, rangeStart } from "@/lib/adminDates";
 import { formatMoney } from "@/lib/money";
-import type { AdminOrderSummary, OrderStatus, PageResponse } from "@/lib/types";
+import { useAdmin } from "@/lib/useAdmin";
+import { useCounts, usePagedList } from "@/lib/usePagedList";
+import type { AdminOrderSummary, OrderStatus } from "@/lib/types";
 
 const STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
 
 function AdminOrdersInner() {
-  const { ready, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") ?? "";
-  const [orders, setOrders] = useState<AdminOrderSummary[] | null>(null);
-  const [error, setError] = useState(false);
+  const range = parseRange(searchParams.get("range"));
+  const admin = useAdmin(`/admin/orders${searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
+  const [search, setSearch] = useState("");
 
-  const load = () => {
-    if (user?.role !== "ADMIN") return;
-    setError(false);
-    const qs = statusFilter ? `?status=${statusFilter}` : "";
-    authFetch<PageResponse<AdminOrderSummary>>(`/api/admin/orders${qs}`, user.token)
-      .then((res) => setOrders(res.items))
-      .catch(() => setError(true));
-  };
+  // Computed once per range change so the request URL is stable between renders.
+  const from = useMemo(() => rangeStart(range), [range]);
+  const rangeQuery = from ? `from=${encodeURIComponent(from)}` : "";
 
-  useEffect(() => {
-    if (ready && (!user || user.role !== "ADMIN")) {
-      router.push("/login?redirect=/admin/orders");
-      return;
-    }
-    setOrders(null);
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, statusFilter]);
+  const listQuery = [statusFilter ? `status=${statusFilter}` : "", rangeQuery].filter(Boolean).join("&");
+  const list = usePagedList<AdminOrderSummary>(admin ? `/api/admin/orders?${listQuery}` : null, !!admin);
+
+  const counts = useCounts(
+    admin
+      ? {
+          all: `/api/admin/orders?${rangeQuery}`,
+          ...Object.fromEntries(STATUSES.map((s) => [s, `/api/admin/orders?status=${s}${rangeQuery ? `&${rangeQuery}` : ""}`])),
+        }
+      : null,
+    !!admin
+  );
+
+  function pushParams(next: { status?: string; range?: string }) {
+    const params = new URLSearchParams();
+    const status = next.status !== undefined ? next.status : statusFilter;
+    const r = next.range !== undefined ? next.range : range;
+    if (status) params.set("status", status);
+    if (r !== "all") params.set("range", r);
+    const s = params.toString();
+    router.push(s ? `/admin/orders?${s}` : "/admin/orders");
+  }
+
+  const term = search.trim().toLowerCase();
+  const visible = useMemo(() => {
+    if (!list.items) return null;
+    if (!term) return list.items;
+    const digits = term.replace(/\D/g, "");
+    return list.items.filter(
+      (o) =>
+        o.orderNumber.toLowerCase().includes(term) ||
+        o.customerName.toLowerCase().includes(term) ||
+        (digits.length >= 3 && o.customerPhone.replace(/\D/g, "").includes(digits))
+    );
+  }, [list.items, term]);
+
+  const filtered = !!statusFilter || range !== "all";
 
   return (
     <AdminShell>
-      <div>
-        <h1 className="mb-8 font-serif text-[56px] max-[640px]:text-[38px]">Orders</h1>
+      <AdminPageHeader title="Orders" />
 
-        <div className="mb-8 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <FilterRow label="Filter by status">
           {["", ...STATUSES].map((s) => (
-            <button
-              key={s || "all"}
-              onClick={() => router.push(s ? `/admin/orders?status=${s}` : "/admin/orders")}
-              className={`h-9 border px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] ${
-                statusFilter === s ? "border-ink bg-ink text-white" : "border-rule text-grey hover:text-ink"
-              }`}
-            >
-              {s ? s.replace(/_/g, " ") : "All"}
-            </button>
+            <FilterToggle key={s || "all"} active={statusFilter === s} count={counts[s || "all"]} onClick={() => pushParams({ status: s })}>
+              {s ? orderStatusChip(s as OrderStatus).label : "All"}
+            </FilterToggle>
           ))}
-        </div>
-
-        {!orders && !error && (
-          <div className="border-t border-rule py-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="border-b border-rule py-4">
-                <div className="h-2.5 w-full max-w-[600px] animate-pulse bg-skeleton" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div className="border-t border-rule py-20 text-center">
-            <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-signal">Request failed</div>
-            <div className="mb-2.5 font-serif text-[28px]">Orders did not load</div>
-            <div className="mb-6 text-sm text-grey">The shop is reachable but the listing request failed.</div>
-            <button
-              onClick={load}
-              className="h-12 bg-ink px-6 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark"
-            >
-              Try again
-            </button>
-          </div>
-        )}
-
-        {orders && orders.length === 0 && <div className="border-t border-rule py-16 text-center text-sm text-grey">No orders match.</div>}
-
-        {orders && orders.length > 0 && (
-          <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[110px_150px_130px_130px_70px_130px_100px_130px] gap-4 border-b border-rule pb-3.5">
-                {["Order", "Customer", "Phone", "Zone", "Items", "Total", "Payment", "Status"].map((h, i) => (
-                  <div key={h} className={`font-mono text-[11px] uppercase tracking-[0.1em] text-grey ${i >= 5 ? "text-right" : ""}`}>
-                    {h}
-                  </div>
-                ))}
-              </div>
-              {orders.map((o) => (
-                <Link
-                  key={o.id}
-                  href={`/admin/orders/${o.id}`}
-                  className="grid grid-cols-[110px_150px_130px_130px_70px_130px_100px_130px] items-center gap-4 border-b border-rule py-[18px] hover:bg-hover-light"
-                >
-                  <div className="font-mono text-[13px]">{o.orderNumber}</div>
-                  <div className="text-sm">{o.customerName}</div>
-                  <div className="font-mono text-[13px] text-grey">{o.customerPhone}</div>
-                  <div className="text-sm">{o.zoneName}</div>
-                  <div className="font-mono text-[13px] text-grey">{o.itemCount}</div>
-                  <div className="text-right font-mono text-[13px]">{formatMoney(o.totalPesewas)}</div>
-                  <div className={`text-right font-mono text-[11px] uppercase tracking-[0.1em] ${o.paymentStatus === "PAID" ? "text-ink" : "text-signal"}`}>
-                    {o.paymentStatus}
-                  </div>
-                  <div className="text-right font-mono text-[11px] uppercase tracking-[0.1em]">{o.status.replace(/_/g, " ")}</div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        </FilterRow>
       </div>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <FilterRow label="Date placed">
+          {DATE_RANGES.map((r) => (
+            <FilterToggle key={r.value} active={range === r.value} onClick={() => pushParams({ range: r.value })}>
+              {r.label}
+            </FilterToggle>
+          ))}
+        </FilterRow>
+        <div className="w-full max-w-[340px] max-[640px]:max-w-none">
+          <input
+            type="search"
+            aria-label="Search loaded orders by order number, customer or phone"
+            aria-describedby="order-search-scope"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Order no., customer or phone"
+            className="field-input h-10"
+          />
+          <p id="order-search-scope" className="mt-1.5 text-xs text-grey">
+            Searches the {list.items?.length ?? 0} orders loaded below.
+          </p>
+        </div>
+      </div>
+
+      {list.error && <ErrorState title="Orders didn't load" onRetry={list.reload} />}
+
+      {!list.error && !visible && <ListSkeleton />}
+
+      {visible && visible.length === 0 && (
+        <div className="border-t border-rule py-16 text-center">
+          <div className="mb-2 font-serif text-h3">{term ? "No loaded orders match" : filtered ? "No orders match" : "No orders yet"}</div>
+          <p className="mb-6 text-sm text-grey">
+            {term
+              ? list.hasMore
+                ? "Load more orders below, or check the spelling."
+                : "Check the spelling, or try the phone number."
+              : filtered
+                ? "Try a different status or date range."
+                : "Orders appear here as soon as a customer checks out."}
+          </p>
+          {(filtered || term) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                router.push("/admin/orders");
+              }}
+              className="btn-outline h-11"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+
+      {visible && visible.length > 0 && (
+        <>
+          <table className="admin-table max-[1099px]:hidden">
+            <thead>
+              <tr>
+                <th scope="col">Order</th>
+                <th scope="col">Placed</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Zone</th>
+                <th scope="col" className="text-right">
+                  Items
+                </th>
+                <th scope="col" className="text-right">
+                  Total
+                </th>
+                <th scope="col">Payment</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((o) => (
+                <tr key={o.id}>
+                  <td>
+                    <Link href={`/admin/orders/${o.id}`} className="row-link font-mono text-meta hover:text-grey">
+                      {o.orderNumber}
+                    </Link>
+                  </td>
+                  <td className="font-mono text-meta text-grey">{formatShortDate(o.createdAt)}</td>
+                  <td>
+                    <div>{o.customerName}</div>
+                    <div className="font-mono text-micro text-grey">{o.customerPhone}</div>
+                  </td>
+                  <td className="text-grey">{o.zoneName}</td>
+                  <td className="text-right font-mono text-meta text-grey">{o.itemCount}</td>
+                  <td className="text-right font-mono text-meta">{formatMoney(o.totalPesewas)}</td>
+                  <td>
+                    <StatusChip chip={paymentChip(o.paymentStatus)} />
+                  </td>
+                  <td>
+                    <StatusChip chip={orderStatusChip(o.status)} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <OrderCards orders={visible} />
+
+          <ListFooter
+            shown={list.items?.length ?? 0}
+            total={list.totalItems}
+            noun={list.totalItems === 1 ? "order" : "orders"}
+            hasMore={list.hasMore}
+            loadingMore={list.loadingMore}
+            moreError={list.moreError}
+            onLoadMore={list.loadMore}
+          />
+        </>
+      )}
     </AdminShell>
   );
 }
