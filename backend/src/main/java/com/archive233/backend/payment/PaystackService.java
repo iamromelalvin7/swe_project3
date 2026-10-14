@@ -1,6 +1,7 @@
 package com.archive233.backend.payment;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
 
@@ -70,8 +71,10 @@ public class PaystackService {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
             mac.init(new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
             byte[] computed = mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8));
-            String computedHex = HexFormat.of().formatHex(computed);
-            return computedHex.equalsIgnoreCase(signatureHeader);
+            // Compare raw bytes in constant time; parseHex accepts either case
+            // and throws on malformed input (caught below → rejected).
+            byte[] provided = HexFormat.of().parseHex(signatureHeader.trim());
+            return MessageDigest.isEqual(computed, provided);
         } catch (Exception ex) {
             return false;
         }

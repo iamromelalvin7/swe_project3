@@ -13,14 +13,20 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.archive233.backend.auth.AuthRateLimitFilter;
+import com.archive233.backend.auth.CsrfHeaderFilter;
 import com.archive233.backend.auth.JwtAuthenticationFilter;
 import com.archive233.backend.error.RestAccessDeniedHandler;
 import com.archive233.backend.error.RestAuthenticationEntryPoint;
 
 /**
- * Stateless, JWT-authenticated API. Role gates live on controller methods via
- * {@code @PreAuthorize}, not on URL patterns here — see hard rule 9,
- * authorization is per resource.
+ * Stateless, JWT-authenticated API. The JWT arrives in the HttpOnly session
+ * cookie (browsers) or a Bearer header (scripts). Role gates live on
+ * controller methods via {@code @PreAuthorize}, not on URL patterns here —
+ * see hard rule 9, authorization is per resource.
+ *
+ * Spring's own CSRF support stays off: it's built around server sessions.
+ * {@link CsrfHeaderFilter} provides CSRF protection for cookie-authenticated
+ * requests instead.
  */
 @Configuration
 @EnableMethodSecurity
@@ -28,17 +34,20 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
+    private final CsrfHeaderFilter csrfHeaderFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
     private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                            AuthRateLimitFilter authRateLimitFilter,
+                           CsrfHeaderFilter csrfHeaderFilter,
                            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
                            RestAccessDeniedHandler restAccessDeniedHandler,
                            CorsConfigurationSource corsConfigurationSource) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authRateLimitFilter = authRateLimitFilter;
+        this.csrfHeaderFilter = csrfHeaderFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
         this.corsConfigurationSource = corsConfigurationSource;
@@ -59,7 +68,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/health", "/api/health/db").permitAll()
                 .requestMatchers("/api/auth/register", "/api/auth/verify-email", "/api/auth/resend-code",
-                    "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                    "/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password",
+                    "/api/auth/session", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/delivery-zones").permitAll()
@@ -71,7 +81,8 @@ public class SecurityConfig {
                 .accessDeniedHandler(restAccessDeniedHandler)
             )
             .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(csrfHeaderFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 }
