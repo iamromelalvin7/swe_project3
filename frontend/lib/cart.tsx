@@ -8,6 +8,8 @@ import type { CartLine } from "./types";
 type CartContextValue = {
   lines: CartLine[];
   count: number;
+  /** True once any line's hold has run out — re-evaluated the moment it does. */
+  anyExpired: boolean;
   loading: boolean;
   error: boolean;
   refresh: () => Promise<void>;
@@ -22,6 +24,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // Bumped when the earliest live hold expires, so `count` / `anyExpired`
+  // (and every consumer) re-render on time instead of on the next click.
+  const [expiryTick, setExpiryTick] = useState(0);
+
+  useEffect(() => {
+    const now = Date.now();
+    const nextExpiry = lines
+      .map((l) => new Date(l.expiresAt).getTime())
+      .filter((t) => t > now)
+      .sort((a, b) => a - b)[0];
+    if (nextExpiry === undefined) return;
+    const id = setTimeout(() => setExpiryTick((t) => t + 1), nextExpiry - now + 50);
+    return () => clearTimeout(id);
+  }, [lines, expiryTick]);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -31,7 +47,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(false);
     try {
-      const cart = await authFetch<CartLine[]>("/api/cart", user.token);
+      const cart = await authFetch<CartLine[]>("/api/cart");
       setLines(cart);
     } catch {
       setError(true);
@@ -50,7 +66,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback(
     async (productId: string, quantity: number) => {
       if (!user) throw new Error("Must be signed in to add to cart");
-      const updated = await authFetch<CartLine[]>("/api/cart/items", user.token, {
+      const updated = await authFetch<CartLine[]>("/api/cart/items", {
         method: "POST",
         body: JSON.stringify({ productId, quantity }),
       });
@@ -63,7 +79,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = useCallback(
     async (productId: string) => {
       if (!user) throw new Error("Must be signed in to modify cart");
-      const updated = await authFetch<CartLine[]>(`/api/cart/items/${productId}`, user.token, {
+      const updated = await authFetch<CartLine[]>(`/api/cart/items/${productId}`, {
         method: "DELETE",
       });
       setLines(updated);
@@ -72,10 +88,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [user]
   );
 
-  const count = lines.filter((l) => new Date(l.expiresAt).getTime() > Date.now()).length;
+  const now = Date.now();
+  const count = lines.filter((l) => new Date(l.expiresAt).getTime() > now).length;
+  const anyExpired = lines.some((l) => new Date(l.expiresAt).getTime() <= now);
 
   return (
-    <CartContext.Provider value={{ lines, count, loading, error, refresh, addItem, removeItem }}>
+    <CartContext.Provider value={{ lines, count, anyExpired, loading, error, refresh, addItem, removeItem }}>
       {children}
     </CartContext.Provider>
   );

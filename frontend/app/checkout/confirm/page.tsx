@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/lib/auth";
@@ -16,25 +17,30 @@ function ConfirmInner() {
 
   useEffect(() => {
     if (!ready || !user || !reference) return;
-    authFetch<OrderDetail>(`/api/checkout/verify?reference=${encodeURIComponent(reference)}`, user.token)
+    authFetch<OrderDetail>(`/api/checkout/verify?reference=${encodeURIComponent(reference)}`, { method: "POST" })
       .then((order) => router.push(`/orders/${order.id}?placed=1`))
-      .catch((err) => setError(err instanceof ApiRequestError ? err.error.message : "Could not verify payment."));
+      .catch((err) => setError(err instanceof ApiRequestError ? err.error.message : "We couldn't verify the payment."));
   }, [ready, user, reference, router]);
 
   return (
-    <main>
+    <>
       <Header />
-      <div className="px-14 py-24 text-center max-[640px]:px-5">
-        {error ? (
-          <>
-            <div className="mb-2.5 font-serif text-[28px]">We couldn&apos;t confirm that payment</div>
-            <div className="text-sm text-grey">{error}</div>
-          </>
+      <main className="page-container py-24 text-center">
+        {error || !reference ? (
+          <div role="alert">
+            <div className="mb-2.5 font-serif text-h3">We couldn&apos;t confirm that payment</div>
+            <p className="mb-7 text-sm text-grey">{error ?? "This page is missing its payment reference."}</p>
+            <Link href="/account?tab=orders" className="link-underline">
+              View your orders →
+            </Link>
+          </div>
         ) : (
-          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Confirming your payment…</div>
+          <p role="status" className="eyebrow">
+            Confirming your payment…
+          </p>
         )}
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
 

@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,5 +53,11 @@ public class AdminOrderController {
     public OrderDetailDto updateStatus(@AuthenticationPrincipal UUID adminId, @PathVariable UUID id,
                                         @Valid @RequestBody UpdateOrderStatusRequest request) {
         return orderService.updateStatus(id, request.status(), adminId);
+    }
+
+    /** Cash-on-delivery only: the rider has collected the cash. */
+    @PostMapping("/{id}/payment/collected")
+    public OrderDetailDto markCashCollected(@PathVariable UUID id) {
+        return orderService.markCashCollected(id);
     }
 }

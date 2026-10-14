@@ -4,8 +4,11 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
+import { Field } from "@/components/Field";
+import { FormError } from "@/components/States";
 import { apiFetch, ApiRequestError } from "@/lib/api";
 import { useAuth, type AuthUser } from "@/lib/auth";
+import { safeRedirect } from "@/lib/redirect";
 
 function VerifyEmailInner() {
   const auth = useAuth();
@@ -30,7 +33,7 @@ function VerifyEmailInner() {
         body: JSON.stringify({ email, code }),
       });
       auth.login(response);
-      router.push(redirect ?? "/products");
+      router.push(safeRedirect(redirect));
     } catch (err) {
       setFormError(err instanceof ApiRequestError ? err.error.message : "Something went wrong. Try again.");
     } finally {
@@ -49,69 +52,57 @@ function VerifyEmailInner() {
       });
       setResent(true);
     } catch (err) {
-      setFormError(err instanceof ApiRequestError ? err.error.message : "Could not resend the code.");
+      setFormError(err instanceof ApiRequestError ? err.error.message : "Couldn't resend the code. Try again.");
     } finally {
       setResending(false);
     }
   }
 
   return (
-    <main>
+    <>
       <Header />
-      <div className="mx-auto max-w-[420px] px-5 py-16">
-        <h1 className="font-serif text-[38px]">Verify your email</h1>
-        <p className="mb-10 text-sm text-grey">
-          We sent a 6-digit code to {email || "your email"}. Enter it below to finish creating your account.
+      <main className="mx-auto max-w-[420px] px-5 py-14 max-[640px]:py-10">
+        <h1 className="font-serif text-h2">Verify your email</h1>
+        <p className="mb-9 mt-2 text-sm text-grey">
+          We sent a 6-digit code to {email ? <span className="text-ink">{email}</span> : "your email"}. Enter it below to finish
+          creating your account.
         </p>
 
-        {formError && (
-          <div className="mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-signal">{formError}</div>
-        )}
+        <FormError message={formError} />
         {resent && (
-          <div className="mb-6 font-mono text-[11px] uppercase tracking-[0.08em] text-ink">A new code was sent.</div>
+          <p role="status" className="mb-6 border-l-2 border-ink py-1 pl-3.5 text-sm text-ink">
+            A new code is on its way.
+          </p>
         )}
 
         <form onSubmit={onSubmit}>
-          <div className="mb-7">
-            <label className="mb-2.5 block font-mono text-[11px] uppercase tracking-[0.1em] text-grey">
-              Verification code
-            </label>
+          <Field label="Verification code">
             <input
-              className="field-input font-mono tracking-[0.3em]"
+              className="field-input font-mono text-lg tracking-code"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="000000"
               inputMode="numeric"
+              autoComplete="one-time-code"
               maxLength={6}
             />
-          </div>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={code.length !== 6 || submitting}
-            className="mt-3.5 h-[52px] w-full bg-ink font-mono text-xs uppercase tracking-[0.12em] text-white hover:opacity-[0.86] disabled:cursor-not-allowed disabled:bg-disabled"
-          >
-            Verify and create account
+          <button type="submit" disabled={code.length !== 6 || submitting} className="btn-primary mt-3 h-[52px] w-full">
+            {submitting ? "Verifying…" : "Verify and create account"}
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={resendCode}
-          disabled={resending || !email}
-          className="mt-6 block w-full text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink disabled:opacity-50"
-        >
-          {resending ? "Sending…" : "Resend code"}
-        </button>
-
-        <Link
-          href="/register"
-          className="mt-3 block w-full text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink"
-        >
-          Wrong email? Start over
-        </Link>
-      </div>
-    </main>
+        <div className="mt-7 flex flex-col items-center gap-3">
+          <button type="button" onClick={resendCode} disabled={resending || !email} className="link-quiet disabled:opacity-50">
+            {resending ? "Sending…" : "Resend code"}
+          </button>
+          <Link href="/register" className="link-quiet">
+            Wrong email? Start over
+          </Link>
+        </div>
+      </main>
+    </>
   );
 }
 

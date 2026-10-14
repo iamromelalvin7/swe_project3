@@ -41,10 +41,12 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     );
 
     private final AuthRateLimiter rateLimiter;
+    private final ClientIpResolver clientIpResolver;
     private final ObjectMapper objectMapper;
 
-    public AuthRateLimitFilter(AuthRateLimiter rateLimiter, ObjectMapper objectMapper) {
+    public AuthRateLimitFilter(AuthRateLimiter rateLimiter, ClientIpResolver clientIpResolver, ObjectMapper objectMapper) {
         this.rateLimiter = rateLimiter;
+        this.clientIpResolver = clientIpResolver;
         this.objectMapper = objectMapper;
     }
 
@@ -53,7 +55,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         boolean guarded = "POST".equalsIgnoreCase(request.getMethod()) && GUARDED_PATHS.contains(request.getRequestURI());
 
-        if (guarded && !rateLimiter.tryAcquire(request.getRequestURI() + "|" + clientIp(request))) {
+        if (guarded && !rateLimiter.tryAcquire("ip|" + request.getRequestURI() + "|" + clientIpResolver.resolve(request))) {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             objectMapper.writeValue(response.getWriter(),
@@ -64,12 +66,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    /** Render terminates TLS in front of the app, so the real client IP is in this header, not getRemoteAddr(). */
-    private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
+    // Per-email limits for the same endpoints are applied in AuthController,
+    // where the request body has been parsed. The client IP comes from
+    // ClientIpResolver — never the spoofable first X-Forwarded-For entry.
 }

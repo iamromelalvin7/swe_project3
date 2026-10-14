@@ -1,11 +1,203 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Fonts come from next/font as CSS variables set on <html> (layout.tsx).
+   `inline` makes Tailwind emit the var() reference at each usage site
+   instead of resolving it once on :root — without it the font utilities
+   silently fall back to the inherited face. */
+@theme inline {
+  --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+}
+
+@theme {
+  /* Palette — every colour in the app comes from here. */
+  --color-cream: #faf9f6;
+  --color-ink: #12100e;
+  --color-grey: #68635a; /* 5.7:1 on cream — passes WCAG AA for body text */
+  --color-rule: #e4e1da;
+  --color-field: #cfcac0; /* input underlines: darker than rule so fields stay findable in sunlight */
+  --color-plate: #f4f2ed;
+  --color-skeleton: #efede7;
+  --color-hover-light: #f2efe9;
+  --color-hover-dark: #2a2622;
+  --color-signal: #b23a20; /* the one red: errors, holds expiring, archived */
+  --color-stock: #5e9a68; /* the one green: in-stock dot */
+  --color-warning: #8a5b22;
+  --color-disabled: #c9c5bc;
+
+  /* Type scale — nothing below 10px. */
+  --text-micro: 10px;
+  --text-micro--line-height: 1.4;
+  --text-label: 11px;
+  --text-label--line-height: 1.45;
+  --text-meta: 13px;
+  --text-meta--line-height: 1.5;
+  --text-body: 15px;
+  --text-body--line-height: 1.6;
+  --text-title: 17px;
+  --text-title--line-height: 1.25;
+  --text-lead: 22px;
+  --text-lead--line-height: 1.2;
+  --text-h3: 28px;
+  --text-h3--line-height: 1.15;
+  --text-h2: 38px;
+  --text-h2--line-height: 1.08;
+  --text-h1: 56px;
+  --text-h1--line-height: 1.02;
+  --text-display: clamp(3rem, 5.6vw, 5.25rem);
+  --text-display--line-height: 0.92;
+  --text-wordmark: 36px;
+  --text-wordmark--line-height: 1;
+
+  /* Letter-spacing for uppercase mono labels. */
+  --tracking-label-sm: 0.08em;
+  --tracking-label: 0.1em;
+  --tracking-cta: 0.14em;
+  --tracking-strip: 0.17em;
+  --tracking-code: 0.3em;
+  --tracking-display: -0.035em;
+}
+
+:root {
+  --page-gutter: clamp(20px, 4.1vw, 64px);
+  --bottom-nav-height: 60px;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-cream);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  /* The customer and admin bottom navs are fixed below 850px / 900px;
+     reserve their height so the end of every page stays visible. */
+  @media (max-width: 849px) {
+    body {
+      padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+    }
+
+    /* The admin shell is a fixed-height app frame that pads its own
+       scroll area instead. */
+    body:has(.admin-shell) {
+      padding-bottom: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
 
 @layer components {
-  /* Matches the design's global input treatment: no box, a single rule
-     underneath, ink on focus. */
+  /* One container for every page: same gutter, same max width, so the
+     header, page body and footer share a left edge at every width. */
+  .page-container {
+    @apply mx-auto w-full max-w-[1600px];
+    padding-inline: var(--page-gutter);
+  }
+
+  .nav-link {
+    @apply relative py-2 font-mono text-label uppercase tracking-label text-ink transition-colors hover:text-grey;
+  }
+
+  .nav-link-active::after {
+    content: "";
+    @apply absolute -bottom-[9px] left-0 right-0 h-px bg-ink;
+  }
+
+  .icon-link {
+    @apply flex h-11 w-9 items-center justify-center text-ink transition-opacity hover:opacity-60;
+  }
+
+  .eyebrow {
+    @apply font-mono text-label uppercase tracking-label text-grey;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-12 items-center justify-center gap-2 bg-ink px-6 font-mono text-xs uppercase tracking-cta text-cream transition-colors hover:bg-hover-dark disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-outline {
+    @apply inline-flex h-12 items-center justify-center gap-2 border border-ink px-6 font-mono text-label uppercase tracking-label text-ink transition-colors hover:bg-ink hover:text-cream disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .link-underline {
+    @apply border-b border-ink pb-[3px] font-mono text-label uppercase tracking-label text-ink transition-colors hover:border-grey hover:text-grey;
+  }
+
+  .link-quiet {
+    @apply font-mono text-label uppercase tracking-label text-grey transition-colors hover:text-ink;
+  }
+
+  .pill {
+    @apply inline-flex h-9 items-center gap-2 rounded-full border border-rule bg-transparent px-4 font-mono text-micro uppercase tracking-label text-ink transition-colors hover:border-ink max-[640px]:px-3;
+  }
+
+  /* Underline input. Ink rule on focus, signal rule on error. */
   .field-input {
-    @apply w-full border-0 border-b border-rule bg-transparent py-2.5 text-[15px] outline-none focus:border-ink;
+    @apply w-full border-0 border-b border-field bg-transparent py-2.5 text-body outline-none transition-colors focus:border-ink disabled:text-grey;
+  }
+
+  textarea.field-input {
+    @apply border border-field px-3 focus:border-ink;
+  }
+
+  .field-input-error {
+    @apply border-signal focus:border-signal;
+  }
+
+  .form-error {
+    @apply text-sm text-signal;
+  }
+
+  .menu-panel {
+    @apply absolute top-11 z-20 min-w-[180px] border border-rule bg-cream py-1.5 shadow-[0_1px_2px_rgba(18,16,14,0.06)];
+  }
+
+  .menu-item {
+    @apply flex w-full items-center justify-between gap-4 px-3.5 py-2.5 text-left font-mono text-label uppercase tracking-label-sm text-ink outline-none hover:bg-hover-light focus-visible:bg-ink focus-visible:text-cream;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-skeleton;
+  }
+
+  /* Admin data tables (desktop). Real <table> semantics; numbers align in
+     columns. The header row stays pinned to the top of the admin scroll
+     area while rows scroll underneath it. Two details make that work:
+     - border-separate (not collapse): with collapsed borders a sticky
+       cell's border stays with the table body, so the divider vanished;
+     - the divider is an inset box-shadow, which always travels with the
+       pinned cell, over an opaque background that hides the rows below. */
+  .admin-table {
+    @apply w-full border-separate border-spacing-0 text-left tabular-nums;
+  }
+
+  .admin-table thead th {
+    @apply sticky top-0 z-20 bg-cream px-3 py-3 font-mono text-micro font-normal uppercase tracking-label text-grey shadow-[inset_0_-1px_0_var(--color-rule)] first:pl-0;
+  }
+
+  .admin-table tbody td {
+    @apply border-b border-rule px-3 py-3 align-middle text-sm first:pl-0;
+  }
+
+  /* Whole-row link: the primary cell's link stretches over the row. */
+  .admin-table tbody tr {
+    @apply relative transition-colors hover:bg-hover-light;
+  }
+
+  .row-link::after {
+    content: "";
+    @apply absolute inset-0;
   }
 }

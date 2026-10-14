@@ -7,6 +7,7 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,12 @@ public class AuthService {
     private final int verificationCodeTtlMinutes;
     private final int passwordResetTtlMinutes;
     private final String frontendUrl;
+    /**
+     * A real BCrypt hash checked when the email has no account, so a login
+     * attempt takes the same time either way and response timing can't be
+     * used to discover which emails are registered.
+     */
+    private final String timingEqualizerHash;
 
     public AuthService(UserRepository userRepository,
                         PasswordEncoder passwordEncoder,
@@ -65,6 +72,7 @@ public class AuthService {
         this.verificationCodeTtlMinutes = verificationCodeTtlMinutes;
         this.passwordResetTtlMinutes = passwordResetTtlMinutes;
         this.frontendUrl = frontendUrl;
+        this.timingEqualizerHash = passwordEncoder.encode("timing-equalizer-" + UUID.randomUUID());
     }
 
     /**
@@ -156,9 +164,10 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-            .orElseThrow(InvalidCredentialsException::new);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        User user = userRepository.findByEmail(request.email()).orElse(null);
+        String hash = user != null ? user.getPasswordHash() : timingEqualizerHash;
+        boolean matches = passwordEncoder.matches(request.password(), hash);
+        if (user == null || !matches) {
             throw new InvalidCredentialsException();
         }
         return toAuthResponse(user);

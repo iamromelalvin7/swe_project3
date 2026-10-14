@@ -2,6 +2,8 @@ package com.archive233.backend.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -90,7 +92,7 @@ class AuthApiTest {
     }
 
     @Test
-    void verifyEmail_withCorrectCode_createsAccountAndReturnsToken() throws Exception {
+    void verifyEmail_withCorrectCode_createsAccountAndSetsSessionCookie() throws Exception {
         String email = uniqueEmail("kwame.boateng");
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -107,7 +109,11 @@ class AuthApiTest {
                     {"email":"%s","code":"%s"}
                     """.formatted(email, code)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.token").isNotEmpty())
+            // The token travels only in the HttpOnly cookie, never the body.
+            .andExpect(jsonPath("$.token").doesNotExist())
+            .andExpect(header().string("Set-Cookie", containsString(AuthCookies.NAME + "=")))
+            .andExpect(header().string("Set-Cookie", containsString("HttpOnly")))
+            .andExpect(header().string("Set-Cookie", containsString("SameSite=Lax")))
             .andExpect(jsonPath("$.role").value("CUSTOMER"))
             .andExpect(jsonPath("$.email").value(email));
 

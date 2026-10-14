@@ -1,6 +1,15 @@
-import { AUTH_STORAGE_KEY } from "./auth";
+/**
+ * Where API requests go.
+ * - In the browser: the shop's own origin. next.config.mjs rewrites /api/* to
+ *   the backend, so the HttpOnly session cookie is first-party and is sent
+ *   automatically — the page's JavaScript never sees the token.
+ * - On the server (React Server Components): straight to the backend. Server
+ *   renders only fetch public data, so they never need the cookie.
+ */
+export const API_BASE_URL = typeof window === "undefined" ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "") : "";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+/** Must match the backend's CsrfHeaderFilter. */
+const CSRF_HEADERS = { "X-Archive-Request": "1" };
 
 export type ApiError = {
   code: string;
@@ -9,65 +18,59 @@ export type ApiError = {
 };
 
 export class ApiRequestError extends Error {
-  constructor(public status: number, public error: ApiError) {
+  constructor(
+    public status: number,
+    public error: ApiError
+  ) {
     super(error.message);
   }
+}
+
+async function parseError(res: Response): Promise<ApiRequestError> {
+  let apiError: ApiError = { code: "UNKNOWN", message: `Request failed with ${res.status}` };
+  try {
+    const body = await res.json();
+    if (body?.error) apiError = body.error;
+  } catch {
+    // response had no JSON body; keep the fallback error above
+  }
+  return new ApiRequestError(res.status, apiError);
 }
 
 /**
  * Shared fetch wrapper. Parses the one error contract into ApiRequestError
  * so callers can branch on `error.code` / `error.fields` instead of status
- * codes alone.
+ * codes alone. Sends the session cookie (same-origin) and the CSRF header.
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const res = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "same-origin",
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
+      ...CSRF_HEADERS,
       ...init?.headers,
     },
   });
 
-  if (!res.ok) {
-    let apiError: ApiError = { code: "UNKNOWN", message: `Request failed with ${res.status}` };
-    try {
-      const body = await res.json();
-      if (body?.error) {
-        apiError = body.error;
-      }
-    } catch {
-      // response had no JSON body; keep the fallback error above
-    }
-    throw new ApiRequestError(res.status, apiError);
-  }
-
-  if (res.status === 204) {
-    return undefined as T;
-  }
+  if (!res.ok) throw await parseError(res);
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
 /**
- * Same as apiFetch, with the caller's bearer token attached. A 401 here
- * always means the token itself was rejected (expired or invalid) — the
- * backend never uses 401 for anything else on an authenticated route — so
- * we treat it as a forced sign-out rather than a generic failure. Without
- * this, a stale token leaves every authenticated page stuck retrying with
- * the same doomed token until the user happens to sign out and back in.
+ * apiFetch for signed-in endpoints. A 401 always means the session cookie
+ * is missing or expired (the backend never uses 401 for anything else on an
+ * authenticated route), so it's treated as a forced sign-out: back to the
+ * sign-in page, returning here afterwards.
  */
-export async function authFetch<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+export async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
   try {
-    return await apiFetch<T>(path, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...init?.headers,
-      },
-    });
+    return await apiFetch<T>(path, init);
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 401 && typeof window !== "undefined") {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY);
-      const redirect = encodeURIComponent(window.location.pathname);
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `/login?redirect=${redirect}`;
     }
     throw err;

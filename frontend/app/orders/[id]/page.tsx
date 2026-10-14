@@ -1,14 +1,22 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { ConfirmDialog } from "@/components/Dialog";
+import { ProductThumb } from "@/components/ProductImage";
+import { ErrorState, FormError } from "@/components/States";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { authFetch, ApiRequestError } from "@/lib/api";
+import { formatStatus } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import type { OrderDetail } from "@/lib/types";
+import { ORDER_POLL_MS, orderMayChange, usePolling } from "@/lib/usePolling";
+
+const ORDERS_HREF = "/account?tab=orders";
 
 function OrderDetailInner() {
   const { ready, user } = useAuth();
@@ -19,8 +27,19 @@ function OrderDetailInner() {
   const justPlaced = searchParams.get("placed") === "1";
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const cancelSeq = useRef(0);
+
+  const load = () => {
+    if (!user) return;
+    setLoadError(null);
+    authFetch<OrderDetail>(`/api/orders/${params.id}`)
+      .then(setOrder)
+      .catch((err) => setLoadError(err instanceof ApiRequestError ? err.error.message : "Check your connection and try again."));
+  };
 
   useEffect(() => {
     if (ready && !user) {
@@ -28,139 +47,181 @@ function OrderDetailInner() {
       return;
     }
     if (user) {
-      authFetch<OrderDetail>(`/api/orders/${params.id}`, user.token)
-        .then(setOrder)
-        .catch((err) => setError(err instanceof ApiRequestError ? err.error.message : "Could not load this order."));
+      load();
       if (justPlaced) refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, params.id]);
 
+  // Status changes made by the shop show up without a refresh. Paused during a
+  // cancel, and a poll that started before the cancel is dropped, so a slow
+  // response can't put the old status back.
+  usePolling(
+    () => {
+      const seq = cancelSeq.current;
+      authFetch<OrderDetail>(`/api/orders/${params.id}`)
+        .then((latest) => seq === cancelSeq.current && setOrder(latest))
+        .catch(() => {});
+    },
+    ORDER_POLL_MS,
+    !!user && !!order && orderMayChange(order) && !confirmingCancel && !cancelling
+  );
+
   async function cancel() {
     if (!user || !order) return;
+    cancelSeq.current += 1;
     setCancelling(true);
+    setCancelError(null);
     try {
-      const updated = await authFetch<OrderDetail>(`/api/orders/${order.id}/cancel`, user.token, { method: "POST" });
+      const updated = await authFetch<OrderDetail>(`/api/orders/${order.id}/cancel`, { method: "POST" });
       setOrder(updated);
+      setConfirmingCancel(false);
+    } catch (err) {
+      setCancelError(err instanceof ApiRequestError ? err.error.message : "Couldn't cancel this order. Try again.");
+      setConfirmingCancel(false);
     } finally {
       setCancelling(false);
     }
   }
 
-  if (error) {
+  if (loadError) {
     return (
-      <main>
+      <>
         <Header />
-        <div className="px-14 py-24 text-center max-[640px]:px-5">
-          <div className="mb-2.5 font-serif text-[28px]">Order not found</div>
-          <div className="text-sm text-grey">{error}</div>
-        </div>
-      </main>
+        <main className="page-container">
+          <ErrorState title="This order didn't load" message={loadError} onRetry={load} className="py-24" />
+        </main>
+        <Footer />
+      </>
     );
   }
 
   if (!order) {
     return (
-      <main>
+      <>
         <Header />
-        <div className="px-14 py-24 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Loading…</div>
-      </main>
+        <main aria-busy="true" className="page-container pb-24 pt-10 max-[640px]:pt-6">
+          <div className="max-w-[640px]">
+            <div className="skeleton h-2.5 w-24" />
+            <div className="skeleton mt-4 h-12 w-64" />
+            <div className="mt-11 border-t border-rule">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex justify-between border-b border-rule py-4">
+                  <div className="skeleton h-2.5 w-24" />
+                  <div className="skeleton h-2.5 w-36" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
     );
   }
 
+  const cashOnDelivery = order.paymentMethod === "CASH_ON_DELIVERY";
+  const paid = order.paymentStatus === "PAID";
   const rows: [string, string][] = [
     ["Order number", order.orderNumber],
+    ["Status", formatStatus(order.status)],
     ["Delivering to", order.deliveryName],
     ["Phone", order.deliveryPhone],
     ["Address", `${order.deliveryAddress} · ${order.deliveryZoneName}`],
-    ["Payment", order.paymentMethod === "CASH_ON_DELIVERY" ? "Cash on delivery" : "Mobile Money / Card"],
-    ["Total paid", formatMoney(order.totalPesewas)],
+    ["Payment", `${cashOnDelivery ? "Cash on delivery" : "Mobile Money / card"}${paid ? " · Paid" : ""}`],
+    ["Subtotal", formatMoney(order.subtotalPesewas)],
+    ["Delivery", formatMoney(order.deliveryFeePesewas)],
+    [cashOnDelivery && !paid ? "Total due on delivery" : "Total", formatMoney(order.totalPesewas)],
   ];
 
   const canCancel = order.status === "PENDING" || order.status === "CONFIRMED";
 
   return (
-    <main>
+    <>
       <Header />
-      <div className="max-w-[640px] px-14 pt-11 pb-[120px] max-[640px]:px-5 max-[640px]:pt-7">
-        {justPlaced ? (
-          <>
-            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Order confirmed</div>
-            <h1 className="mt-3.5 font-serif text-[56px] max-[640px]:text-[38px]">Thank you</h1>
-            <div className="mt-4 max-w-[46ch] text-[15px] text-grey">
-              We have your order and the pieces are held for you. Delivery is arranged by phone within a working day.
-            </div>
-          </>
-        ) : (
-          <>
-            <Link href="/orders" className="mb-6 inline-block font-mono text-[11px] uppercase tracking-[0.1em] text-grey hover:text-ink">
-              ← My orders
-            </Link>
-            <h1 className="font-serif text-[56px] max-[640px]:text-[38px]">{order.orderNumber}</h1>
-            <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">{order.status.replace(/_/g, " ")}</div>
-          </>
-        )}
-
-        <div className="mt-11">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-6 border-t border-rule py-[15px]">
-              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-grey">{label}</span>
-              <span className="text-right text-sm">{value}</span>
-            </div>
-          ))}
-          <div className="border-t border-rule" />
-        </div>
-
-        <div className="mt-11">
-          <div className="pb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">Items</div>
-          {order.items.map((item, i) => (
-            <div key={i} className="flex items-center gap-5 border-t border-rule py-5">
-              <div
-                className="aspect-[3/4] w-16 flex-shrink-0 rounded-[4px] bg-white bg-cover bg-center"
-                style={
-                  item.imageUrl
-                    ? { backgroundImage: `url(${item.imageUrl})` }
-                    : { backgroundImage: "repeating-linear-gradient(135deg, #F4F2ED 0 7px, #FFFFFF 7px 14px)" }
-                }
-              />
-              <div className="flex-1">
-                <div className="text-[15px]">{item.productTitle}</div>
-                <div className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-grey">{item.productSize}</div>
-              </div>
-              <div className="font-mono text-[13px] text-grey">Qty {item.quantity}</div>
-              <div className="w-[120px] text-right font-mono text-sm">{formatMoney(item.pricePesewas)}</div>
-            </div>
-          ))}
-          <div className="border-t border-rule" />
-        </div>
-
-        <div className="mt-10 flex flex-wrap items-center gap-6">
+      <main className="page-container pb-24 pt-10 max-[640px]:pb-14 max-[640px]:pt-6">
+        <div className="max-w-[640px]">
           {justPlaced ? (
             <>
-              <Link
-                href="/orders"
-                className="h-[50px] bg-ink px-7 font-mono text-xs uppercase tracking-[0.12em] text-white hover:bg-hover-dark flex items-center"
-              >
-                View my orders
-              </Link>
-              <Link href="/products" className="border-b border-ink pb-[3px] font-mono text-[11px] uppercase tracking-[0.1em] hover:text-grey hover:border-grey">
-                Keep browsing
-              </Link>
+              <p className="eyebrow">Order confirmed</p>
+              <h1 className="mt-3 font-serif text-h1 max-[640px]:text-h2">Thank you</h1>
+              <p className="mt-4 max-w-[46ch] text-body text-grey">
+                We have your order and the pieces are set aside for you. We&apos;ll call within a working day to arrange delivery.
+              </p>
             </>
           ) : (
-            canCancel && (
-              <button
-                onClick={cancel}
-                disabled={cancelling}
-                className="h-12 border border-ink px-6 font-mono text-[11px] uppercase tracking-[0.1em] hover:bg-ink hover:text-white disabled:opacity-50"
-              >
-                {cancelling ? "Cancelling…" : "Cancel order"}
-              </button>
-            )
+            <>
+              <Link href={ORDERS_HREF} className="link-quiet mb-6 inline-block">
+                ← My orders
+              </Link>
+              <h1 className="font-serif text-h1 max-[640px]:text-h2">{order.orderNumber}</h1>
+              <p className="mt-3 font-mono text-label uppercase tracking-label text-grey">{formatStatus(order.status)}</p>
+            </>
           )}
+
+          <div className="mt-8">
+            <FormError message={cancelError} />
+          </div>
+
+          <dl className="mt-3 border-b border-rule">
+            {rows.map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-6 border-t border-rule py-[15px]">
+                <dt className="eyebrow">{label}</dt>
+                <dd className="text-right text-sm">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <h2 className="eyebrow mt-11 pb-3.5">Pieces</h2>
+          <ul className="border-b border-rule">
+            {order.items.map((item, i) => (
+              <li key={i} className="flex items-center gap-5 border-t border-rule py-5">
+                <ProductThumb src={item.imageUrl} alt="" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-serif text-title">{item.productTitle}</div>
+                  <div className="mt-1 font-mono text-micro uppercase tracking-label text-grey">
+                    Size {item.productSize}
+                    {item.quantity > 1 ? ` · ×${item.quantity}` : ""}
+                  </div>
+                </div>
+                <div className="text-right font-mono text-meta">{formatMoney(item.pricePesewas * item.quantity)}</div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-10 flex flex-wrap items-center gap-6">
+            {justPlaced ? (
+              <>
+                <Link href={ORDERS_HREF} className="btn-primary h-[50px] px-7">
+                  View my orders
+                </Link>
+                <Link href="/products#archive" className="link-underline">
+                  Keep browsing
+                </Link>
+              </>
+            ) : (
+              canCancel && (
+                <button type="button" onClick={() => setConfirmingCancel(true)} className="btn-outline">
+                  Cancel order
+                </button>
+              )
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+
+        {confirmingCancel && (
+          <ConfirmDialog
+            title="Cancel this order?"
+            body="The pieces go back into the archive and someone else can buy them. This can't be undone."
+            confirmLabel="Cancel order"
+            danger
+            busy={cancelling}
+            onConfirm={cancel}
+            onCancel={() => setConfirmingCancel(false)}
+          />
+        )}
+      </main>
+      <Footer />
+    </>
   );
 }
 
