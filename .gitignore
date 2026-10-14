@@ -44,3 +44,9 @@ clothes/
 /CLAUDE.md
 /docs/PRD.md
 /docs/OBJECTIVES.md
+# Working notes, audits and design inspiration — kept locally, not published
+# (decided 2026-10-14).
+/.agents/
+/security-audit/
+/recommendations/
+/future-improvements/

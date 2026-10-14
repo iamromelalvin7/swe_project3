@@ -534,7 +534,13 @@ dashboard).
 Also gitignored:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8080
+# Where the Next.js server proxies /api/* to. The browser itself only ever
+# calls the frontend's own origin, so the session cookie stays first-party.
+API_URL=http://localhost:8080
+# (NEXT_PUBLIC_API_URL is still accepted as a fallback for older setups.)
+
+# Optional locally; required in production — see "Environment variables".
+# PROXY_SHARED_SECRET=<same long random string as the backend's>
 ```
 
 ### 4. Start local Postgres
@@ -646,6 +652,19 @@ products so the storefront has something to browse.
 
 ### 10. Running the backend test suite (optional)
 
+> **Warning:** the integration tests run against whatever database
+> `backend/.env` points at. If that is production, `mvn test` runs against
+> production. Point `SPRING_DATASOURCE_*` at local Docker Postgres first.
+
+The security unit tests need no database and are always safe to run:
+
+```bash
+cd backend
+mvn test -Dtest=SecurityUnitTest
+```
+
+The full suite (local database only):
+
 ```bash
 cd backend
 mvn test
@@ -663,16 +682,25 @@ fixture email.
 | Variable | Used for | Required to start? |
 |---|---|---|
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Postgres connection | Yes |
-| `JWT_SECRET` | Signs auth tokens | Yes |
-| `JWT_EXPIRY_HOURS` | Token lifetime | No — defaults to 24 |
+| `JWT_SECRET` | Signs auth tokens (at least 32 bytes) | Yes |
+| `JWT_EXPIRY_HOURS` | Session lifetime (token and cookie) | No — defaults to 24 |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Verification and password-reset emails | Yes |
+| `AUTH_COOKIE_SECURE` | `Secure` flag on the session cookie | No — defaults to `true`; leave it on (browsers accept it on `http://localhost` too) |
+| `PROXY_SHARED_SECRET` | Lets the backend trust the shopper IP the frontend proxy forwards, for rate limiting. **Set the same long random value on the frontend and the backend in production**; without it every shopper shares the frontend server's IP for rate limiting | No to start; **yes in production** |
+| `TRUSTED_PROXY_HOPS` | How many proxies append to `X-Forwarded-For` in front of the backend | No — defaults to `1` (Render); use `0` if the backend is ever exposed directly |
+| `CHECKOUT_RATE_LIMIT_MAX_ATTEMPTS` / `_WINDOW_MINUTES` | Checkout attempts per signed-in user | No — defaults to 10 per 15 minutes |
+| `AUTH_RATE_LIMIT_MAX_ATTEMPTS` / `_WINDOW_MINUTES` | Auth attempts per IP and per email | No — defaults to 5 per 15 minutes |
 | `CORS_ALLOWED_ORIGINS` | Allowed browser origin (never a wildcard) | Yes |
 | `FRONTEND_URL` | Paystack callback URL | Yes |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Product image storage | Yes to start; only image upload fails without a real bucket |
 | `SUPABASE_BUCKET` | Storage bucket name | No — defaults to `product-images` |
 | `PAYSTACK_SECRET_KEY` | Mobile Money payment initialize/verify | Yes to start; cash-on-delivery works without a real key |
 | `CART_HOLD_MINUTES` | Reservation hold window | No — defaults to 10 |
-| `NEXT_PUBLIC_API_URL` (frontend) | Backend base URL the browser calls | Yes |
+| `API_URL` (frontend, server-only) | Backend base URL the Next.js server proxies `/api/*` to | Yes (or the `NEXT_PUBLIC_API_URL` fallback) |
+| `PROXY_SHARED_SECRET` (frontend, server-only) | Must equal the backend's value — see above | **Yes in production** |
 
 Secrets are never committed and never `NEXT_PUBLIC_`-prefixed on the server
-side; both `.env` files are gitignored.
+side; both `.env` files are gitignored. The backend refuses to start if a
+required setting is missing (`config/StartupConfigValidator`), reporting
+only the setting's name.
 
