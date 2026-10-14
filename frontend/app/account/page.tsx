@@ -12,6 +12,7 @@ import { authFetch, ApiRequestError } from "@/lib/api";
 import { formatStatus } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import type { OrderSummary, PageResponse, UserProfile } from "@/lib/types";
+import { ORDER_POLL_MS, isFinalOrderStatus, usePolling } from "@/lib/usePolling";
 
 const TABS: { key: "details" | "orders"; label: string }[] = [
   { key: "details", label: "Details" },
@@ -63,6 +64,17 @@ function AccountInner() {
     if (tab === "orders" && ready && user) loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, ready, user]);
+
+  // Keep statuses current while any listed order can still change.
+  usePolling(
+    () => {
+      authFetch<PageResponse<OrderSummary>>("/api/orders")
+        .then((res) => setOrders(res.items))
+        .catch(() => {});
+    },
+    ORDER_POLL_MS,
+    tab === "orders" && !!user && !!orders && orders.some((o) => !isFinalOrderStatus(o.status))
+  );
 
   // "Saved." is a moment, not a state — clear it on the next edit.
   function edit(key: keyof typeof form, value: string) {
